@@ -41,13 +41,13 @@ def upload_cv():
         file = request.files['cv_file']
         
         # Check if file was actually selected
-        if file.filename == '':
+        if not file.filename:
             flash('No file selected', 'error')
             return redirect(request.url)
         
         if file and allowed_file(file.filename):
             try:
-                filename = secure_filename(file.filename)
+                filename = secure_filename(file.filename or 'unknown')
                 file_extension = filename.rsplit('.', 1)[1].lower()
                 
                 # Save file temporarily
@@ -204,7 +204,8 @@ def healthcheck():
     """Health check endpoint"""
     try:
         # Test database connection
-        db.session.execute('SELECT 1')
+        from sqlalchemy import text
+        db.session.execute(text('SELECT 1'))
         return jsonify({'status': 'OK', 'database': 'connected'}), 200
     except Exception as e:
         logger.error(f"Health check failed: {str(e)}")
