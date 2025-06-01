@@ -397,11 +397,15 @@ function generateCandidateNodes() {
             console.log('Loaded candidates data:', data);
             const candidatesWithEmbeddings = data.candidates || [];
             
-            // Update count display
-            vectorCount.textContent = candidatesWithEmbeddings.length;
+            // Update count display safely
+            if (vectorCount) {
+                vectorCount.textContent = candidatesWithEmbeddings.length;
+            }
             
             if (candidatesWithEmbeddings.length > 0) {
-                status.textContent = `Espacio vectorial listo - ${candidatesWithEmbeddings.length} candidatos`;
+                if (status) {
+                    status.textContent = `Espacio vectorial listo - ${candidatesWithEmbeddings.length} candidatos`;
+                }
                 
                 // Create scatter points for candidates
                 candidatesWithEmbeddings.forEach((candidate, index) => {
@@ -411,7 +415,9 @@ function generateCandidateNodes() {
                 // Add background ambient points for context
                 createAmbientScatterPoints(scatterPlot, 80);
             } else {
-                status.textContent = 'No hay candidatos con embeddings. Sube algunos CVs primero.';
+                if (status) {
+                    status.textContent = 'No hay candidatos con embeddings. Sube algunos CVs primero.';
+                }
                 // Still create demo points
                 createAmbientScatterPoints(scatterPlot, 50);
             }
@@ -420,7 +426,9 @@ function generateCandidateNodes() {
         })
         .catch(error => {
             console.error('Error loading detailed candidates:', error);
-            status.textContent = 'Error cargando candidatos. Mostrando visualización demo...';
+            if (status) {
+                status.textContent = 'Error cargando candidatos. Mostrando visualización demo...';
+            }
             createAmbientScatterPoints(scatterPlot, 60);
         });
 }
@@ -781,16 +789,15 @@ function performSemanticSearch(query) {
             if (data.results && data.results.length > 0) {
                 displaySearchResults(data.results);
                 highlightMatchedCandidates(data.results);
-                status.textContent = `Búsqueda completada - ${data.results.length} coincidencias encontradas`;
+                console.log('Highlighting candidates:', data.results);
             } else {
-                status.textContent = 'No se encontraron coincidencias';
                 displaySearchResults([]);
             }
             
             isSearching = false;
             searchBtn.innerHTML = '<i class="fas fa-rocket me-2"></i>Buscar';
             searchBtn.disabled = false;
-        }, 3000);
+        }, 2000);
     })
     .catch(error => {
         console.error('Search error:', error);
