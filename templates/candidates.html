@@ -1,0 +1,315 @@
+{% extends "base.html" %}
+
+{% block title %}All Candidates - AI Recruitment System{% endblock %}
+
+{% block content %}
+<div class="row">
+    <div class="col-12">
+        <div class="d-flex justify-content-between align-items-center mb-4">
+            <h1 class="display-6">
+                <i class="fas fa-users me-3"></i>
+                All Candidates
+            </h1>
+            <div>
+                <a href="{{ url_for('upload_cv') }}" class="btn btn-primary me-2">
+                    <i class="fas fa-upload me-2"></i>Upload CV
+                </a>
+                <a href="{{ url_for('search') }}" class="btn btn-outline-secondary">
+                    <i class="fas fa-search me-2"></i>Search
+                </a>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Candidates List -->
+<div class="row">
+    <div class="col-12">
+        <div class="card">
+            <div class="card-header d-flex justify-content-between align-items-center">
+                <h5 class="card-title mb-0">
+                    <i class="fas fa-list me-2"></i>
+                    Candidate Database
+                </h5>
+                {% if candidates %}
+                    <span class="badge bg-primary">{{ candidates|length }} total</span>
+                {% endif %}
+            </div>
+            
+            {% if candidates %}
+                <div class="card-body p-0">
+                    <div class="table-responsive">
+                        <table class="table table-hover mb-0">
+                            <thead class="table-dark">
+                                <tr>
+                                    <th style="width: 25%;">Candidate</th>
+                                    <th style="width: 25%;">Contact Information</th>
+                                    <th style="width: 20%;">Skills</th>
+                                    <th style="width: 15%;">Experience</th>
+                                    <th style="width: 10%;">File Info</th>
+                                    <th style="width: 5%;">Actions</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for candidate in candidates %}
+                                    <tr>
+                                        <td>
+                                            <div class="d-flex align-items-center">
+                                                <div class="bg-primary rounded-circle d-flex align-items-center justify-content-center me-3" 
+                                                     style="width: 50px; height: 50px;">
+                                                    <span class="text-white fw-bold fs-5">
+                                                        {{ candidate.name[0] if candidate.name else 'U' }}
+                                                    </span>
+                                                </div>
+                                                <div>
+                                                    <h6 class="mb-1 fw-bold">{{ candidate.name }}</h6>
+                                                    <small class="text-muted">
+                                                        <i class="fas fa-calendar me-1"></i>
+                                                        {{ candidate.created_at.strftime('%Y-%m-%d %H:%M') if candidate.created_at else 'Unknown' }}
+                                                    </small>
+                                                </div>
+                                            </div>
+                                        </td>
+                                        <td>
+                                            {% if candidate.email %}
+                                                <div class="mb-1">
+                                                    <i class="fas fa-envelope me-2 text-muted"></i>
+                                                    <a href="mailto:{{ candidate.email }}" class="text-decoration-none small">
+                                                        {{ candidate.email }}
+                                                    </a>
+                                                </div>
+                                            {% endif %}
+                                            {% if candidate.phone %}
+                                                <div class="mb-1">
+                                                    <i class="fas fa-phone me-2 text-muted"></i>
+                                                    <span class="small">{{ candidate.phone }}</span>
+                                                </div>
+                                            {% endif %}
+                                            {% if not candidate.email and not candidate.phone %}
+                                                <span class="text-muted small">No contact information</span>
+                                            {% endif %}
+                                        </td>
+                                        <td>
+                                            {% if candidate.skills %}
+                                                {% set skills_data = candidate.skills %}
+                                                {% if skills_data.startswith('[') %}
+                                                    {% set skills_list = skills_data|from_json %}
+                                                {% else %}
+                                                    {% set skills_list = skills_data.split(',') %}
+                                                {% endif %}
+                                                
+                                                {% if skills_list %}
+                                                    <div class="skills-container">
+                                                        {% for skill in skills_list[:3] %}
+                                                            <span class="badge bg-secondary mb-1">{{ skill|trim }}</span>
+                                                        {% endfor %}
+                                                        {% if skills_list|length > 3 %}
+                                                            <div>
+                                                                <span class="badge bg-light text-dark small">+{{ skills_list|length - 3 }} more</span>
+                                                            </div>
+                                                        {% endif %}
+                                                    </div>
+                                                {% else %}
+                                                    <span class="text-muted small">No skills listed</span>
+                                                {% endif %}
+                                            {% else %}
+                                                <span class="text-muted small">No skills listed</span>
+                                            {% endif %}
+                                        </td>
+                                        <td>
+                                            {% if candidate.experience %}
+                                                {% set exp_data = candidate.experience %}
+                                                {% if exp_data.startswith('[') %}
+                                                    {% set exp_list = exp_data|from_json %}
+                                                    {% if exp_list %}
+                                                        <div class="small">
+                                                            {% for exp in exp_list[:2] %}
+                                                                <div class="mb-1">
+                                                                    <strong>{{ exp.title if exp.title else 'Position' }}</strong>
+                                                                    {% if exp.company %}
+                                                                        <br><small class="text-muted">{{ exp.company }}</small>
+                                                                    {% endif %}
+                                                                </div>
+                                                            {% endfor %}
+                                                            {% if exp_list|length > 2 %}
+                                                                <small class="text-muted">+{{ exp_list|length - 2 }} more</small>
+                                                            {% endif %}
+                                                        </div>
+                                                    {% else %}
+                                                        <span class="text-muted small">No experience listed</span>
+                                                    {% endif %}
+                                                {% else %}
+                                                    <div class="small text-truncate" style="max-width: 150px;" title="{{ exp_data }}">
+                                                        {{ exp_data }}
+                                                    </div>
+                                                {% endif %}
+                                            {% else %}
+                                                <span class="text-muted small">No experience listed</span>
+                                            {% endif %}
+                                        </td>
+                                        <td>
+                                            <div class="text-center">
+                                                <span class="badge bg-info text-uppercase mb-1">
+                                                    {{ candidate.file_type }}
+                                                </span>
+                                                <div class="small text-muted">
+                                                    {{ candidate.original_filename|truncate(20) if candidate.original_filename else 'Unknown file' }}
+                                                </div>
+                                            </div>
+                                        </td>
+                                        <td>
+                                            <div class="dropdown">
+                                                <button class="btn btn-outline-primary btn-sm dropdown-toggle" 
+                                                        type="button" 
+                                                        data-bs-toggle="dropdown">
+                                                    <i class="fas fa-ellipsis-v"></i>
+                                                </button>
+                                                <ul class="dropdown-menu">
+                                                    <li>
+                                                        <a class="dropdown-item" href="{{ url_for('view_candidate', candidate_id=candidate.id) }}">
+                                                            <i class="fas fa-eye me-2"></i>View Details
+                                                        </a>
+                                                    </li>
+                                                    {% if candidate.email %}
+                                                        <li>
+                                                            <a class="dropdown-item" href="mailto:{{ candidate.email }}">
+                                                                <i class="fas fa-envelope me-2"></i>Send Email
+                                                            </a>
+                                                        </li>
+                                                    {% endif %}
+                                                    <li><hr class="dropdown-divider"></li>
+                                                    <li>
+                                                        <a class="dropdown-item text-danger" href="#" onclick="confirmDelete({{ candidate.id }}, '{{ candidate.name }}')">
+                                                            <i class="fas fa-trash me-2"></i>Delete
+                                                        </a>
+                                                    </li>
+                                                </ul>
+                                            </div>
+                                        </td>
+                                    </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            {% else %}
+                <div class="card-body text-center py-5">
+                    <div class="text-muted">
+                        <i class="fas fa-users fa-3x mb-3"></i>
+                        <h5>No candidates found</h5>
+                        <p>Start building your candidate database by uploading CVs.</p>
+                        <a href="{{ url_for('upload_cv') }}" class="btn btn-primary">
+                            <i class="fas fa-upload me-2"></i>Upload First CV
+                        </a>
+                    </div>
+                </div>
+            {% endif %}
+        </div>
+    </div>
+</div>
+
+<!-- Summary Statistics -->
+{% if candidates %}
+<div class="row mt-4">
+    <div class="col-md-3">
+        <div class="card text-center">
+            <div class="card-body">
+                <i class="fas fa-users fa-2x text-primary mb-2"></i>
+                <h5 class="card-title">{{ candidates|length }}</h5>
+                <p class="card-text small text-muted">Total Candidates</p>
+            </div>
+        </div>
+    </div>
+    
+    <div class="col-md-3">
+        <div class="card text-center">
+            <div class="card-body">
+                <i class="fas fa-file-pdf fa-2x text-danger mb-2"></i>
+                <h5 class="card-title">{{ candidates|selectattr('file_type', 'equalto', 'pdf')|list|length }}</h5>
+                <p class="card-text small text-muted">PDF Files</p>
+            </div>
+        </div>
+    </div>
+    
+    <div class="col-md-3">
+        <div class="card text-center">
+            <div class="card-body">
+                <i class="fas fa-file-word fa-2x text-primary mb-2"></i>
+                <h5 class="card-title">{{ candidates|selectattr('file_type', 'equalto', 'docx')|list|length }}</h5>
+                <p class="card-text small text-muted">DOCX Files</p>
+            </div>
+        </div>
+    </div>
+    
+    <div class="col-md-3">
+        <div class="card text-center">
+            <div class="card-body">
+                <i class="fas fa-file-alt fa-2x text-success mb-2"></i>
+                <h5 class="card-title">{{ candidates|selectattr('file_type', 'equalto', 'txt')|list|length }}</h5>
+                <p class="card-text small text-muted">TXT Files</p>
+            </div>
+        </div>
+    </div>
+</div>
+{% endif %}
+
+<!-- Delete Confirmation Modal -->
+<div class="modal fade" id="deleteModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">
+                    <i class="fas fa-exclamation-triangle text-warning me-2"></i>
+                    Confirm Delete
+                </h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <p>Are you sure you want to delete the candidate <strong id="candidateName"></strong>?</p>
+                <p class="text-muted small mb-0">This action cannot be undone.</p>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                <button type="button" class="btn btn-danger" id="confirmDeleteBtn">
+                    <i class="fas fa-trash me-2"></i>Delete
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_scripts %}
+<script>
+let candidateToDelete = null;
+
+function confirmDelete(candidateId, candidateName) {
+    candidateToDelete = candidateId;
+    document.getElementById('candidateName').textContent = candidateName;
+    
+    const modal = new bootstrap.Modal(document.getElementById('deleteModal'));
+    modal.show();
+}
+
+document.getElementById('confirmDeleteBtn').addEventListener('click', function() {
+    if (candidateToDelete) {
+        // Here you would typically make an AJAX call to delete the candidate
+        // For now, we'll just show an alert since we don't have a delete endpoint
+        alert('Delete functionality would be implemented here');
+        
+        const modal = bootstrap.Modal.getInstance(document.getElementById('deleteModal'));
+        modal.hide();
+        
+        candidateToDelete = null;
+    }
+});
+
+// Initialize tooltips
+document.addEventListener('DOMContentLoaded', function() {
+    const tooltipTriggerList = [].slice.call(document.querySelectorAll('[data-bs-toggle="tooltip"]'));
+    const tooltipList = tooltipTriggerList.map(function (tooltipTriggerEl) {
+        return new bootstrap.Tooltip(tooltipTriggerEl);
+    });
+});
+</script>
+{% endblock %}

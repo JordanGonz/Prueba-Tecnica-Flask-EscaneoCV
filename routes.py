@@ -1,0 +1,194 @@
+import os
+import logging
+from flask import render_template, request, redirect, url_for, flash, jsonify
+from werkzeug.utils import secure_filename
+from app import app, db
+from models import Candidate
+from parsers.pdf_parser import extract_text_from_pdf
+from parsers.docx_parser import extract_text_from_docx
+from parsers.text_cleaner import clean_and_extract_info
+from storage.sqlite_handler import search_candidates, get_all_candidates
+
+logger = logging.getLogger(__name__)
+
+ALLOWED_EXTENSIONS = {'pdf', 'docx', 'txt'}
+
+def allowed_file(filename):
+    """Check if the uploaded file has an allowed extension"""
+    return '.' in filename and \
+           filename.rsplit('.', 1)[1].lower() in ALLOWED_EXTENSIONS
+
+@app.route('/')
+def index():
+    """Home page showing recruitment system dashboard"""
+    total_candidates = db.session.query(Candidate).count()
+    recent_candidates = db.session.query(Candidate).order_by(Candidate.created_at.desc()).limit(5).all()
+    
+    return render_template('index.html', 
+                         total_candidates=total_candidates,
+                         recent_candidates=recent_candidates)
+
+@app.route('/upload', methods=['GET', 'POST'])
+def upload_cv():
+    """Handle CV upload and processing"""
+    if request.method == 'POST':
+        # Check if file was uploaded
+        if 'cv_file' not in request.files:
+            flash('No file selected', 'error')
+            return redirect(request.url)
+        
+        file = request.files['cv_file']
+        
+        # Check if file was actually selected
+        if file.filename == '':
+            flash('No file selected', 'error')
+            return redirect(request.url)
+        
+        if file and allowed_file(file.filename):
+            try:
+                filename = secure_filename(file.filename)
+                file_extension = filename.rsplit('.', 1)[1].lower()
+                
+                # Save file temporarily
+                filepath = os.path.join(app.config['UPLOAD_FOLDER'], filename)
+                file.save(filepath)
+                
+                # Extract text based on file type
+                extracted_text = ""
+                if file_extension == 'pdf':
+                    extracted_text = extract_text_from_pdf(filepath)
+                elif file_extension == 'docx':
+                    extracted_text = extract_text_from_docx(filepath)
+                elif file_extension == 'txt':
+                    with open(filepath, 'r', encoding='utf-8') as f:
+                        extracted_text = f.read()
+                
+                if not extracted_text.strip():
+                    flash('Could not extract text from the file', 'error')
+                    os.remove(filepath)
+                    return redirect(request.url)
+                
+                # Clean and extract information
+                candidate_info = clean_and_extract_info(extracted_text)
+                
+                # Create new candidate record
+                candidate = Candidate(
+                    name=candidate_info.get('name', 'Unknown'),
+                    email=candidate_info.get('email', ''),
+                    phone=candidate_info.get('phone', ''),
+                    education=candidate_info.get('education', ''),
+                    experience=candidate_info.get('experience', ''),
+                    skills=candidate_info.get('skills', ''),
+                    full_text=extracted_text,
+                    original_filename=filename,
+                    file_type=file_extension
+                )
+                
+                db.session.add(candidate)
+                db.session.commit()
+                
+                # Clean up temporary file
+                os.remove(filepath)
+                
+                flash(f'CV uploaded successfully! Candidate: {candidate.name}', 'success')
+                logger.info(f"Successfully processed CV: {filename} for candidate: {candidate.name}")
+                
+                return redirect(url_for('view_candidate', candidate_id=candidate.id))
+                
+            except Exception as e:
+                logger.error(f"Error processing CV {filename}: {str(e)}")
+                flash(f'Error processing CV: {str(e)}', 'error')
+                
+                # Clean up file if it exists
+                if os.path.exists(filepath):
+                    os.remove(filepath)
+                
+                return redirect(request.url)
+        else:
+            flash('Invalid file type. Please upload PDF, DOCX, or TXT files only.', 'error')
+            return redirect(request.url)
+    
+    return render_template('upload.html')
+
+@app.route('/search', methods=['GET', 'POST'])
+def search():
+    """Search for candidates"""
+    candidates = []
+    search_query = ""
+    
+    if request.method == 'POST':
+        search_query = request.form.get('search_query', '').strip()
+        
+        if search_query:
+            try:
+                candidates = search_candidates(search_query)
+                logger.info(f"Search performed for query: '{search_query}', found {len(candidates)} candidates")
+                
+                if not candidates:
+                    flash(f'No candidates found for "{search_query}"', 'info')
+                else:
+                    flash(f'Found {len(candidates)} candidate(s) for "{search_query}"', 'success')
+                    
+            except Exception as e:
+                logger.error(f"Error performing search: {str(e)}")
+                flash(f'Error performing search: {str(e)}', 'error')
+        else:
+            flash('Please enter a search query', 'error')
+    
+    return render_template('search.html', 
+                         candidates=candidates, 
+                         search_query=search_query)
+
+@app.route('/candidates')
+def candidates():
+    """View all candidates"""
+    try:
+        all_candidates = get_all_candidates()
+        return render_template('candidates.html', candidates=all_candidates)
+    except Exception as e:
+        logger.error(f"Error fetching candidates: {str(e)}")
+        flash(f'Error fetching candidates: {str(e)}', 'error')
+        return render_template('candidates.html', candidates=[])
+
+@app.route('/candidate/<int:candidate_id>')
+def view_candidate(candidate_id):
+    """View individual candidate details"""
+    try:
+        candidate = db.session.get(Candidate, candidate_id)
+        if not candidate:
+            flash('Candidate not found', 'error')
+            return redirect(url_for('candidates'))
+        
+        return render_template('candidate_detail.html', candidate=candidate)
+    except Exception as e:
+        logger.error(f"Error fetching candidate {candidate_id}: {str(e)}")
+        flash(f'Error fetching candidate: {str(e)}', 'error')
+        return redirect(url_for('candidates'))
+
+@app.route('/healthcheck')
+def healthcheck():
+    """Health check endpoint"""
+    try:
+        # Test database connection
+        db.session.execute('SELECT 1')
+        return jsonify({'status': 'OK', 'database': 'connected'}), 200
+    except Exception as e:
+        logger.error(f"Health check failed: {str(e)}")
+        return jsonify({'status': 'ERROR', 'message': str(e)}), 500
+
+@app.errorhandler(413)
+def too_large(e):
+    """Handle file too large error"""
+    flash('File too large. Maximum size is 16MB.', 'error')
+    return redirect(url_for('upload_cv'))
+
+@app.errorhandler(404)
+def not_found(e):
+    """Handle 404 errors"""
+    return render_template('404.html'), 404
+
+@app.errorhandler(500)
+def internal_error(e):
+    """Handle 500 errors"""
+    logger.error(f"Internal server error: {str(e)}")
+    return render_template('500.html'), 500

@@ -1,0 +1,337 @@
+{% extends "base.html" %}
+
+{% block title %}Search Candidates - AI Recruitment System{% endblock %}
+
+{% block content %}
+<div class="row">
+    <div class="col-12">
+        <div class="card">
+            <div class="card-header">
+                <h2 class="card-title mb-0">
+                    <i class="fas fa-search me-2"></i>
+                    Search Candidates
+                </h2>
+            </div>
+            
+            <div class="card-body">
+                <form method="POST" class="mb-4">
+                    <div class="row">
+                        <div class="col-lg-10">
+                            <div class="input-group input-group-lg">
+                                <span class="input-group-text">
+                                    <i class="fas fa-search"></i>
+                                </span>
+                                <input type="text" 
+                                       class="form-control" 
+                                       name="search_query" 
+                                       id="search_query"
+                                       placeholder="Search by name, skills, experience, education..."
+                                       value="{{ search_query }}"
+                                       required>
+                            </div>
+                            <div class="form-text">
+                                <i class="fas fa-lightbulb me-1"></i>
+                                Try searching for: "Python developer", "React", "5 years experience", "Computer Science"
+                            </div>
+                        </div>
+                        <div class="col-lg-2">
+                            <button type="submit" class="btn btn-primary btn-lg w-100">
+                                <i class="fas fa-search me-2"></i>
+                                Search
+                            </button>
+                        </div>
+                    </div>
+                </form>
+                
+                <!-- Search Examples -->
+                <div class="mb-4">
+                    <h6 class="fw-bold mb-3">Quick Search Examples:</h6>
+                    <div class="d-flex flex-wrap gap-2">
+                        <button type="button" class="btn btn-outline-secondary btn-sm search-example" data-query="Python">
+                            Python
+                        </button>
+                        <button type="button" class="btn btn-outline-secondary btn-sm search-example" data-query="React">
+                            React
+                        </button>
+                        <button type="button" class="btn btn-outline-secondary btn-sm search-example" data-query="JavaScript">
+                            JavaScript
+                        </button>
+                        <button type="button" class="btn btn-outline-secondary btn-sm search-example" data-query="Senior">
+                            Senior Level
+                        </button>
+                        <button type="button" class="btn btn-outline-secondary btn-sm search-example" data-query="Frontend">
+                            Frontend
+                        </button>
+                        <button type="button" class="btn btn-outline-secondary btn-sm search-example" data-query="Backend">
+                            Backend
+                        </button>
+                        <button type="button" class="btn btn-outline-secondary btn-sm search-example" data-query="Full Stack">
+                            Full Stack
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Search Results -->
+{% if search_query %}
+<div class="row mt-4">
+    <div class="col-12">
+        <div class="card">
+            <div class="card-header d-flex justify-content-between align-items-center">
+                <h5 class="card-title mb-0">
+                    <i class="fas fa-list-ul me-2"></i>
+                    Search Results for "{{ search_query }}"
+                </h5>
+                {% if candidates %}
+                    <span class="badge bg-primary">{{ candidates|length }} found</span>
+                {% endif %}
+            </div>
+            
+            {% if candidates %}
+                <div class="card-body p-0">
+                    <div class="table-responsive">
+                        <table class="table table-hover mb-0">
+                            <thead class="table-dark">
+                                <tr>
+                                    <th style="width: 30%;">Candidate</th>
+                                    <th style="width: 25%;">Contact</th>
+                                    <th style="width: 20%;">Skills Preview</th>
+                                    <th style="width: 15%;">File Type</th>
+                                    <th style="width: 10%;">Actions</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for candidate in candidates %}
+                                    <tr>
+                                        <td>
+                                            <div class="d-flex align-items-center">
+                                                <div class="bg-primary rounded-circle d-flex align-items-center justify-content-center me-3" 
+                                                     style="width: 50px; height: 50px;">
+                                                    <span class="text-white fw-bold fs-5">
+                                                        {{ candidate.name[0] if candidate.name else 'U' }}
+                                                    </span>
+                                                </div>
+                                                <div>
+                                                    <h6 class="mb-1 fw-bold">{{ candidate.name }}</h6>
+                                                    <small class="text-muted">
+                                                        Uploaded: {{ candidate.created_at.strftime('%Y-%m-%d') if candidate.created_at else 'Unknown' }}
+                                                    </small>
+                                                </div>
+                                            </div>
+                                        </td>
+                                        <td>
+                                            {% if candidate.email %}
+                                                <div class="mb-1">
+                                                    <i class="fas fa-envelope me-2 text-muted"></i>
+                                                    <a href="mailto:{{ candidate.email }}" class="text-decoration-none">
+                                                        {{ candidate.email }}
+                                                    </a>
+                                                </div>
+                                            {% endif %}
+                                            {% if candidate.phone %}
+                                                <div>
+                                                    <i class="fas fa-phone me-2 text-muted"></i>
+                                                    <span>{{ candidate.phone }}</span>
+                                                </div>
+                                            {% endif %}
+                                            {% if not candidate.email and not candidate.phone %}
+                                                <span class="text-muted">No contact info</span>
+                                            {% endif %}
+                                        </td>
+                                        <td>
+                                            {% if candidate.skills %}
+                                                {% set skills_list = candidate.skills|from_json if candidate.skills.startswith('[') else candidate.skills.split(',') %}
+                                                {% if skills_list %}
+                                                    <div class="d-flex flex-wrap gap-1">
+                                                        {% for skill in skills_list[:3] %}
+                                                            <span class="badge bg-secondary">{{ skill|trim }}</span>
+                                                        {% endfor %}
+                                                        {% if skills_list|length > 3 %}
+                                                            <span class="badge bg-light text-dark">+{{ skills_list|length - 3 }} more</span>
+                                                        {% endif %}
+                                                    </div>
+                                                {% else %}
+                                                    <span class="text-muted">No skills listed</span>
+                                                {% endif %}
+                                            {% else %}
+                                                <span class="text-muted">No skills listed</span>
+                                            {% endif %}
+                                        </td>
+                                        <td>
+                                            <span class="badge bg-info text-uppercase">
+                                                {{ candidate.file_type }}
+                                            </span>
+                                        </td>
+                                        <td>
+                                            <a href="{{ url_for('view_candidate', candidate_id=candidate.id) }}" 
+                                               class="btn btn-sm btn-outline-primary">
+                                                <i class="fas fa-eye me-1"></i>View
+                                            </a>
+                                        </td>
+                                    </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            {% else %}
+                <div class="card-body text-center py-5">
+                    <div class="text-muted">
+                        <i class="fas fa-search fa-3x mb-3"></i>
+                        <h5>No candidates found</h5>
+                        <p>No candidates match your search criteria for "{{ search_query }}".</p>
+                        <div class="mt-3">
+                            <button type="button" class="btn btn-outline-primary me-2" onclick="document.getElementById('search_query').value=''; document.getElementById('search_query').focus();">
+                                <i class="fas fa-times me-1"></i>Clear Search
+                            </button>
+                            <a href="{{ url_for('candidates') }}" class="btn btn-outline-secondary">
+                                <i class="fas fa-users me-1"></i>View All Candidates
+                            </a>
+                        </div>
+                    </div>
+                </div>
+            {% endif %}
+        </div>
+    </div>
+</div>
+{% endif %}
+
+<!-- Search Tips -->
+<div class="row mt-4">
+    <div class="col-12">
+        <div class="card">
+            <div class="card-header">
+                <h5 class="card-title mb-0">
+                    <i class="fas fa-info-circle me-2"></i>
+                    Search Tips
+                </h5>
+            </div>
+            <div class="card-body">
+                <div class="row">
+                    <div class="col-md-6">
+                        <h6 class="fw-bold">What you can search for:</h6>
+                        <ul class="list-unstyled">
+                            <li class="mb-2">
+                                <i class="fas fa-check text-success me-2"></i>
+                                <strong>Skills:</strong> "Python", "React", "Machine Learning"
+                            </li>
+                            <li class="mb-2">
+                                <i class="fas fa-check text-success me-2"></i>
+                                <strong>Experience:</strong> "Senior", "5 years", "Lead"
+                            </li>
+                            <li class="mb-2">
+                                <i class="fas fa-check text-success me-2"></i>
+                                <strong>Education:</strong> "Computer Science", "MBA", "PhD"
+                            </li>
+                            <li class="mb-2">
+                                <i class="fas fa-check text-success me-2"></i>
+                                <strong>Job Titles:</strong> "Developer", "Manager", "Analyst"
+                            </li>
+                        </ul>
+                    </div>
+                    <div class="col-md-6">
+                        <h6 class="fw-bold">Search tips:</h6>
+                        <ul class="list-unstyled">
+                            <li class="mb-2">
+                                <i class="fas fa-lightbulb text-warning me-2"></i>
+                                Use specific terms for better results
+                            </li>
+                            <li class="mb-2">
+                                <i class="fas fa-lightbulb text-warning me-2"></i>
+                                Search is case-insensitive
+                            </li>
+                            <li class="mb-2">
+                                <i class="fas fa-lightbulb text-warning me-2"></i>
+                                Try different keyword combinations
+                            </li>
+                            <li class="mb-2">
+                                <i class="fas fa-lightbulb text-warning me-2"></i>
+                                Search covers all CV content
+                            </li>
+                        </ul>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_scripts %}
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    // Search example buttons
+    const searchExamples = document.querySelectorAll('.search-example');
+    const searchInput = document.getElementById('search_query');
+    
+    searchExamples.forEach(button => {
+        button.addEventListener('click', function() {
+            const query = this.getAttribute('data-query');
+            searchInput.value = query;
+            searchInput.focus();
+        });
+    });
+    
+    // Auto-focus search input
+    searchInput.focus();
+    
+    // Highlight search terms in results
+    const searchQuery = "{{ search_query }}";
+    if (searchQuery) {
+        highlightSearchTerms(searchQuery);
+    }
+});
+
+function highlightSearchTerms(query) {
+    const terms = query.toLowerCase().split(' ');
+    const textNodes = getTextNodes(document.querySelector('tbody'));
+    
+    textNodes.forEach(node => {
+        let text = node.textContent;
+        let highlighted = false;
+        
+        terms.forEach(term => {
+            if (term.length > 2) {
+                const regex = new RegExp(`(${escapeRegExp(term)})`, 'gi');
+                if (regex.test(text)) {
+                    text = text.replace(regex, '<mark>$1</mark>');
+                    highlighted = true;
+                }
+            }
+        });
+        
+        if (highlighted) {
+            const span = document.createElement('span');
+            span.innerHTML = text;
+            node.parentNode.replaceChild(span, node);
+        }
+    });
+}
+
+function getTextNodes(element) {
+    const textNodes = [];
+    const walker = document.createTreeWalker(
+        element,
+        NodeFilter.SHOW_TEXT,
+        null,
+        false
+    );
+    
+    let node;
+    while (node = walker.nextNode()) {
+        if (node.textContent.trim()) {
+            textNodes.push(node);
+        }
+    }
+    
+    return textNodes;
+}
+
+function escapeRegExp(string) {
+    return string.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+}
+</script>
+{% endblock %}
