@@ -1,6 +1,6 @@
 {% extends "base.html" %}
 
-{% block title %}All Candidates - AI Recruitment System{% endblock %}
+{% block title %}Todos los Candidatos - Sistema de Reclutamiento IA{% endblock %}
 
 {% block content %}
 <div class="row">
@@ -8,14 +8,14 @@
         <div class="d-flex justify-content-between align-items-center mb-4">
             <h1 class="display-6">
                 <i class="fas fa-users me-3"></i>
-                All Candidates
+                Todos los Candidatos
             </h1>
             <div>
                 <a href="{{ url_for('upload_cv') }}" class="btn btn-primary me-2">
-                    <i class="fas fa-upload me-2"></i>Upload CV
+                    <i class="fas fa-upload me-2"></i>Subir CV
                 </a>
                 <a href="{{ url_for('search') }}" class="btn btn-outline-secondary">
-                    <i class="fas fa-search me-2"></i>Search
+                    <i class="fas fa-search me-2"></i>Buscar
                 </a>
             </div>
         </div>
@@ -29,10 +29,10 @@
             <div class="card-header d-flex justify-content-between align-items-center">
                 <h5 class="card-title mb-0">
                     <i class="fas fa-list me-2"></i>
-                    Candidate Database
+                    Base de Datos de Candidatos
                 </h5>
                 {% if candidates %}
-                    <span class="badge bg-primary">{{ candidates|length }} total</span>
+                    <span class="badge bg-primary">{{ candidates|length }} en total</span>
                 {% endif %}
             </div>
             
@@ -42,12 +42,12 @@
                         <table class="table table-hover mb-0">
                             <thead class="table-dark">
                                 <tr>
-                                    <th style="width: 25%;">Candidate</th>
-                                    <th style="width: 25%;">Contact Information</th>
-                                    <th style="width: 20%;">Skills</th>
-                                    <th style="width: 15%;">Experience</th>
-                                    <th style="width: 10%;">File Info</th>
-                                    <th style="width: 5%;">Actions</th>
+                                    <th style="width: 25%;">Candidato</th>
+                                    <th style="width: 25%;">Información de Contacto</th>
+                                    <th style="width: 20%;">Habilidades</th>
+                                    <th style="width: 15%;">Experiencia</th>
+                                    <th style="width: 10%;">Archivo</th>
+                                    <th style="width: 5%;">Acciones</th>
                                 </tr>
                             </thead>
                             <tbody>
@@ -86,7 +86,7 @@
                                                 </div>
                                             {% endif %}
                                             {% if not candidate.email and not candidate.phone %}
-                                                <span class="text-muted small">No contact information</span>
+                                                <span class="text-muted small">Sin información de contacto</span>
                                             {% endif %}
                                         </td>
                                         <td>
@@ -110,10 +110,10 @@
                                                         {% endif %}
                                                     </div>
                                                 {% else %}
-                                                    <span class="text-muted small">No skills listed</span>
+                                                    <span class="text-muted small">Sin habilidades</span>
                                                 {% endif %}
                                             {% else %}
-                                                <span class="text-muted small">No skills listed</span>
+                                                <span class="text-muted small">Sin habilidades</span>
                                             {% endif %}
                                         </td>
                                         <td>
@@ -136,7 +136,7 @@
                                                             {% endif %}
                                                         </div>
                                                     {% else %}
-                                                        <span class="text-muted small">No experience listed</span>
+                                                        <span class="text-muted small">Sin experiencia registrada</span>
                                                     {% endif %}
                                                 {% else %}
                                                     <div class="small text-truncate" style="max-width: 150px;" title="{{ exp_data }}">
@@ -144,7 +144,7 @@
                                                     </div>
                                                 {% endif %}
                                             {% else %}
-                                                <span class="text-muted small">No experience listed</span>
+                                                <span class="text-muted small">Sin experiencia registrada</span>
                                             {% endif %}
                                         </td>
                                         <td>
