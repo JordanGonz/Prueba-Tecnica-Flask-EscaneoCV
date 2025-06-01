@@ -170,7 +170,7 @@ def search():
         else:
             flash('Please enter a search query', 'error')
     
-    return render_template('search.html', 
+    return render_template('search_new.html', 
                          candidates=candidates, 
                          search_query=search_query)
 
@@ -217,6 +217,95 @@ def delete_candidate(candidate_id):
     except Exception as e:
         logger.error(f"Error deleting candidate {candidate_id}: {str(e)}")
         return jsonify({'success': False, 'message': str(e)}), 500
+
+@app.route('/api/candidates-vectors')
+def api_candidates_vectors():
+    """Get all candidates with their vector embeddings for visualization"""
+    try:
+        candidates = Candidate.query.filter(Candidate.text_embedding.isnot(None)).all()
+        
+        candidates_data = []
+        for candidate in candidates:
+            candidates_data.append({
+                'id': candidate.id,
+                'name': candidate.name,
+                'email': candidate.email,
+                'phone': candidate.phone,
+                'skills': candidate.skills,
+                'has_embedding': bool(candidate.text_embedding)
+            })
+        
+        return jsonify({
+            'candidates': candidates_data,
+            'count': len(candidates_data)
+        })
+        
+    except Exception as e:
+        logger.error(f"Error fetching candidates vectors: {str(e)}")
+        return jsonify({'error': str(e), 'candidates': []}), 500
+
+@app.route('/api/semantic-search', methods=['POST'])
+def api_semantic_search():
+    """Perform semantic search using embeddings"""
+    try:
+        data = request.get_json()
+        query = data.get('query', '').strip()
+        
+        if not query:
+            return jsonify({'error': 'Query is required', 'results': []}), 400
+        
+        # Generate embedding for search query
+        from parsers.vision_parser import generate_text_embedding, search_candidates_semantic
+        
+        query_embedding = generate_text_embedding(query)
+        
+        # Get all candidates with embeddings
+        candidates = Candidate.query.filter(Candidate.text_embedding.isnot(None)).all()
+        
+        # Prepare candidates for semantic search
+        candidate_embeddings = []
+        for candidate in candidates:
+            if candidate.text_embedding:
+                try:
+                    embedding = json.loads(candidate.text_embedding)
+                    candidate_embeddings.append({
+                        'id': candidate.id,
+                        'name': candidate.name,
+                        'email': candidate.email,
+                        'phone': candidate.phone,
+                        'skills': candidate.skills,
+                        'embedding': embedding,
+                        'candidate': candidate
+                    })
+                except json.JSONDecodeError:
+                    continue
+        
+        # Perform semantic search
+        results = search_candidates_semantic(query, candidate_embeddings, top_k=10)
+        
+        # Format results
+        formatted_results = []
+        for result in results:
+            formatted_results.append({
+                'id': result['id'],
+                'name': result['name'],
+                'email': result['email'],
+                'phone': result['phone'],
+                'skills': result['skills'],
+                'similarity': result['similarity']
+            })
+        
+        logger.info(f"Semantic search for '{query}' returned {len(formatted_results)} results")
+        
+        return jsonify({
+            'query': query,
+            'results': formatted_results,
+            'count': len(formatted_results)
+        })
+        
+    except Exception as e:
+        logger.error(f"Error in semantic search: {str(e)}")
+        return jsonify({'error': str(e), 'results': []}), 500
 
 @app.route('/healthcheck')
 def healthcheck():
