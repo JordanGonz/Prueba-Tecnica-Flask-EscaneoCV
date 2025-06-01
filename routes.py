@@ -1,4 +1,5 @@
 import os
+import json
 import logging
 from flask import render_template, request, redirect, url_for, flash, jsonify
 from werkzeug.utils import secure_filename
@@ -102,17 +103,17 @@ def upload_cv():
                 
                 # Create new candidate record
                 candidate = Candidate(
-                    name=candidate_info.get('name', 'Unknown'),
-                    email=candidate_info.get('email', ''),
-                    phone=candidate_info.get('phone', ''),
-                    education=candidate_info.get('education', ''),
-                    experience=candidate_info.get('experience', ''),
-                    skills=candidate_info.get('skills', ''),
-                    languages=str(vision_data.get('languages', [])) if vision_data.get('languages') else '',
-                    certifications=str(vision_data.get('certifications', [])) if vision_data.get('certifications') else '',
+                    name=vision_data.get('name', candidate_info.get('name', 'Unknown')),
+                    email=vision_data.get('email', candidate_info.get('email', '')),
+                    phone=vision_data.get('phone', candidate_info.get('phone', '')),
+                    education=json.dumps(vision_data.get('education', [])) if vision_data.get('education') else '',
+                    experience=json.dumps(vision_data.get('experience', [])) if vision_data.get('experience') else '',
+                    skills=json.dumps(vision_data.get('skills', [])) if vision_data.get('skills') else '',
+                    languages=json.dumps(vision_data.get('languages', [])) if vision_data.get('languages') else '',
+                    certifications=json.dumps(vision_data.get('certifications', [])) if vision_data.get('certifications') else '',
                     summary=vision_data.get('summary', ''),
-                    vision_analysis=str(vision_data) if vision_data else '',
-                    text_embedding=str(embedding) if embedding else '',
+                    vision_analysis=json.dumps(vision_data) if vision_data else '',
+                    text_embedding=json.dumps(embedding) if embedding else '',
                     full_text=extracted_text,
                     original_filename=filename,
                     file_type=file_extension
