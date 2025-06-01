@@ -244,6 +244,45 @@ def api_candidates_vectors():
         logger.error(f"Error fetching candidates vectors: {str(e)}")
         return jsonify({'error': str(e), 'candidates': []}), 500
 
+@app.route('/api/candidates-vectors-detailed')
+def api_candidates_vectors_detailed():
+    """Get all candidates with detailed vector embeddings for advanced visualization"""
+    try:
+        candidates = Candidate.query.filter(Candidate.text_embedding.isnot(None)).all()
+        candidates_data = []
+        
+        for candidate in candidates:
+            candidate_dict = {
+                'id': candidate.id,
+                'name': candidate.name,
+                'email': candidate.email,
+                'skills': candidate.skills,
+                'embedding': None,
+                'embedding_magnitude': 0
+            }
+            
+            # Include full embedding vector
+            if candidate.text_embedding:
+                try:
+                    embedding = json.loads(candidate.text_embedding)
+                    candidate_dict['embedding'] = embedding
+                    # Calculate vector magnitude for visualization
+                    magnitude = sum(x*x for x in embedding) ** 0.5
+                    candidate_dict['embedding_magnitude'] = magnitude
+                except:
+                    pass
+                
+            candidates_data.append(candidate_dict)
+        
+        return jsonify({
+            'candidates': candidates_data,
+            'count': len(candidates_data),
+            'embedding_dimensions': 1536 if candidates_data and candidates_data[0]['embedding'] else 0
+        })
+    except Exception as e:
+        logger.error(f"Error fetching detailed candidates vectors: {str(e)}")
+        return jsonify({'error': str(e)}), 500
+
 @app.route('/api/semantic-search', methods=['POST'])
 def api_semantic_search():
     """Perform semantic search using embeddings"""

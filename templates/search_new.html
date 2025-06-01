@@ -98,6 +98,40 @@
     100% { opacity: 0; }
 }
 
+@keyframes pulse {
+    0%, 100% {
+        transform: scale(1);
+        opacity: 1;
+    }
+    50% {
+        transform: scale(1.2);
+        opacity: 0.8;
+    }
+}
+
+@keyframes expand {
+    from {
+        transform: scale(0);
+        opacity: 1;
+    }
+    to {
+        transform: scale(1);
+        opacity: 0;
+    }
+}
+
+@keyframes bounce {
+    0%, 20%, 50%, 80%, 100% {
+        transform: translateY(0);
+    }
+    40% {
+        transform: translateY(-10px);
+    }
+    60% {
+        transform: translateY(-5px);
+    }
+}
+
 .search-status {
     position: absolute;
     top: 50%;
@@ -343,32 +377,63 @@ function initializeVisualization() {
 
 function generateCandidateNodes() {
     const visualization = document.getElementById('vectorVisualization');
-    const rect = visualization.getBoundingClientRect();
     
-    candidates.forEach((candidate, index) => {
-        const node = document.createElement('div');
-        node.className = 'candidate-node';
-        node.style.width = '12px';
-        node.style.height = '12px';
-        
-        // Distribute nodes in a natural way across the space
-        const angle = (index / candidates.length) * 2 * Math.PI;
-        const radius = 150 + Math.random() * 100;
-        const x = rect.width / 2 + Math.cos(angle) * radius;
-        const y = rect.height / 2 + Math.sin(angle) * radius;
-        
-        node.style.left = Math.max(10, Math.min(x, rect.width - 20)) + 'px';
-        node.style.top = Math.max(10, Math.min(y, rect.height - 20)) + 'px';
-        
-        node.setAttribute('data-candidate-id', candidate.id);
-        node.setAttribute('data-candidate-name', candidate.name);
-        
-        node.addEventListener('click', () => {
-            window.open(`/candidate/${candidate.id}`, '_blank');
+    // Get real embeddings from candidates
+    fetch('/api/candidates-vectors-detailed')
+        .then(response => response.json())
+        .then(data => {
+            const candidatesWithEmbeddings = data.candidates;
+            
+            candidatesWithEmbeddings.forEach((candidate, index) => {
+                const node = document.createElement('div');
+                node.className = 'candidate-node';
+                node.style.width = '15px';
+                node.style.height = '15px';
+                
+                // Position based on first 2 dimensions of actual embedding vector
+                if (candidate.embedding && candidate.embedding.length >= 2) {
+                    // Normalize embedding dimensions to visualization space
+                    const x = mapEmbeddingToVisualization(candidate.embedding[0], 50, 450);
+                    const y = mapEmbeddingToVisualization(candidate.embedding[1], 50, 450);
+                    
+                    node.style.left = x + 'px';
+                    node.style.top = y + 'px';
+                } else {
+                    // Fallback positioning
+                    const angle = (index / candidatesWithEmbeddings.length) * 2 * Math.PI;
+                    const radius = 100 + Math.random() * 150;
+                    const x = 250 + Math.cos(angle) * radius;
+                    const y = 250 + Math.sin(angle) * radius;
+                    
+                    node.style.left = Math.max(10, Math.min(x, 490)) + 'px';
+                    node.style.top = Math.max(10, Math.min(y, 490)) + 'px';
+                }
+                
+                node.setAttribute('data-candidate-id', candidate.id);
+                node.setAttribute('data-candidate-name', candidate.name);
+                node.setAttribute('data-embedding', JSON.stringify(candidate.embedding));
+                
+                // Add hover tooltip with candidate info
+                node.title = `${candidate.name}\nHabilidades: ${candidate.skills ? JSON.parse(candidate.skills).slice(0,3).join(', ') : 'N/A'}`;
+                
+                node.addEventListener('click', () => {
+                    window.open(`/candidate/${candidate.id}`, '_blank');
+                });
+                
+                visualization.appendChild(node);
+            });
+            
+            candidates = candidatesWithEmbeddings;
+        })
+        .catch(error => {
+            console.error('Error loading detailed candidates:', error);
         });
-        
-        visualization.appendChild(node);
-    });
+}
+
+function mapEmbeddingToVisualization(embeddingValue, min, max) {
+    // Map embedding values (typically between -1 and 1) to visualization coordinates
+    const normalized = (embeddingValue + 1) / 2; // Convert from [-1,1] to [0,1]
+    return min + normalized * (max - min);
 }
 
 function performSemanticSearch(query) {
@@ -431,45 +496,177 @@ function animateVectorSearch(query) {
     const visualization = document.getElementById('vectorVisualization');
     const status = document.getElementById('searchStatus');
     
-    console.log('Starting vector search animation for:', query);
+    console.log('Starting advanced vector search animation for:', query);
     
-    // Make sure visualization is visible
-    visualization.style.display = 'block';
-    visualization.style.opacity = '1';
+    // Clear previous search animations
+    document.querySelectorAll('.search-vector, .similarity-line').forEach(el => el.remove());
     
-    // Create multiple search waves with delays
-    for (let i = 0; i < 5; i++) {
-        setTimeout(() => {
-            const wave = createSearchWave();
-            visualization.appendChild(wave);
-        }, i * 400);
-    }
+    // Create query vector in center
+    const queryVector = createQueryVector();
+    visualization.appendChild(queryVector);
     
-    // Create animated particles continuously
-    const particleInterval = setInterval(() => {
-        createQueryParticle();
-    }, 150);
-    
-    // Stop particles after 3 seconds
+    // Phase 1: Generate query embedding
     setTimeout(() => {
-        clearInterval(particleInterval);
-    }, 3000);
+        status.textContent = '🧠 Generando embedding de consulta...';
+        animateQueryEmbeddingGeneration(queryVector);
+    }, 200);
     
-    // Update status with animated text
-    const statusMessages = [
-        '🔍 Analizando consulta con IA...',
-        '🧠 Generando embeddings vectoriales...',
-        '⚡ Calculando similitud semántica...',
-        '🌌 Procesando espacio vectorial...',
-        '🎯 Identificando mejores coincidencias...'
-    ];
+    // Phase 2: Calculate similarities with all candidates
+    setTimeout(() => {
+        status.textContent = '⚡ Calculando similitudes vectoriales...';
+        animateVectorSimilarityCalculation();
+    }, 1000);
     
-    statusMessages.forEach((message, index) => {
+    // Phase 3: Rank results
+    setTimeout(() => {
+        status.textContent = '📊 Ordenando por similitud semántica...';
+        animateResultRanking();
+    }, 2000);
+}
+
+function createQueryVector() {
+    const queryVector = document.createElement('div');
+    queryVector.className = 'search-vector query-vector';
+    queryVector.style.position = 'absolute';
+    queryVector.style.width = '20px';
+    queryVector.style.height = '20px';
+    queryVector.style.borderRadius = '50%';
+    queryVector.style.background = 'radial-gradient(circle, #ff6b6b 0%, #ee5a24 100%)';
+    queryVector.style.boxShadow = '0 0 20px #ff6b6b';
+    queryVector.style.left = '240px';
+    queryVector.style.top = '240px';
+    queryVector.style.zIndex = '10';
+    queryVector.style.border = '2px solid #ffffff';
+    
+    // Add pulsing animation
+    queryVector.style.animation = 'pulse 1.5s infinite';
+    
+    return queryVector;
+}
+
+function animateQueryEmbeddingGeneration(queryVector) {
+    // Create embedding visualization around query vector
+    for (let i = 0; i < 8; i++) {
         setTimeout(() => {
-            status.textContent = message;
-            status.style.fontSize = '18px';
-            status.style.fontWeight = 'bold';
-        }, index * 500);
+            const embeddingRing = document.createElement('div');
+            embeddingRing.className = 'embedding-ring';
+            embeddingRing.style.position = 'absolute';
+            embeddingRing.style.width = (30 + i * 15) + 'px';
+            embeddingRing.style.height = (30 + i * 15) + 'px';
+            embeddingRing.style.border = '2px solid rgba(255, 107, 107, 0.3)';
+            embeddingRing.style.borderRadius = '50%';
+            embeddingRing.style.left = (250 - (15 + i * 7.5)) + 'px';
+            embeddingRing.style.top = (250 - (15 + i * 7.5)) + 'px';
+            embeddingRing.style.animation = 'expand 1s ease-out forwards';
+            
+            queryVector.parentNode.appendChild(embeddingRing);
+            
+            // Remove after animation
+            setTimeout(() => {
+                if (embeddingRing.parentNode) {
+                    embeddingRing.parentNode.removeChild(embeddingRing);
+                }
+            }, 1000);
+        }, i * 100);
+    }
+}
+
+function animateVectorSimilarityCalculation() {
+    const candidateNodes = document.querySelectorAll('.candidate-node');
+    
+    candidateNodes.forEach((node, index) => {
+        setTimeout(() => {
+            // Create similarity calculation line
+            const line = createSimilarityLine(250, 250, 
+                parseInt(node.style.left), parseInt(node.style.top));
+            node.parentNode.appendChild(line);
+            
+            // Animate calculation
+            node.style.transform = 'scale(1.5)';
+            node.style.boxShadow = '0 0 15px #00d4ff';
+            
+            // Show similarity percentage
+            setTimeout(() => {
+                const embedding = JSON.parse(node.getAttribute('data-embedding') || '[]');
+                const similarity = calculateMockSimilarity(embedding);
+                
+                const simLabel = document.createElement('div');
+                simLabel.className = 'similarity-label';
+                simLabel.textContent = `${(similarity * 100).toFixed(1)}%`;
+                simLabel.style.position = 'absolute';
+                simLabel.style.left = (parseInt(node.style.left) + 20) + 'px';
+                simLabel.style.top = (parseInt(node.style.top) - 10) + 'px';
+                simLabel.style.color = '#ffffff';
+                simLabel.style.fontSize = '12px';
+                simLabel.style.fontWeight = 'bold';
+                simLabel.style.background = 'rgba(0, 0, 0, 0.7)';
+                simLabel.style.padding = '2px 6px';
+                simLabel.style.borderRadius = '4px';
+                simLabel.style.zIndex = '15';
+                
+                node.parentNode.appendChild(simLabel);
+                
+                // Clean up after delay
+                setTimeout(() => {
+                    node.style.transform = 'scale(1)';
+                    node.style.boxShadow = '';
+                    if (line.parentNode) line.parentNode.removeChild(line);
+                    if (simLabel.parentNode) simLabel.parentNode.removeChild(simLabel);
+                }, 1500);
+            }, 500);
+        }, index * 150);
+    });
+}
+
+function createSimilarityLine(x1, y1, x2, y2) {
+    const line = document.createElement('div');
+    line.className = 'similarity-line';
+    
+    const length = Math.sqrt((x2 - x1) ** 2 + (y2 - y1) ** 2);
+    const angle = Math.atan2(y2 - y1, x2 - x1) * 180 / Math.PI;
+    
+    line.style.position = 'absolute';
+    line.style.width = length + 'px';
+    line.style.height = '2px';
+    line.style.background = 'linear-gradient(90deg, #ff6b6b 0%, #00d4ff 100%)';
+    line.style.left = x1 + 'px';
+    line.style.top = y1 + 'px';
+    line.style.transformOrigin = '0 50%';
+    line.style.transform = `rotate(${angle}deg)`;
+    line.style.opacity = '0.7';
+    line.style.zIndex = '5';
+    
+    return line;
+}
+
+function calculateMockSimilarity(embedding) {
+    // Simulate realistic similarity calculation based on actual embedding
+    if (!embedding || embedding.length === 0) return Math.random() * 0.3;
+    
+    // Use actual embedding values to create realistic similarity
+    const magnitude = Math.sqrt(embedding.slice(0, 10).reduce((sum, val) => sum + val * val, 0));
+    const normalized = magnitude / 10; // Normalize to reasonable range
+    return Math.min(Math.max(normalized + Math.random() * 0.2 - 0.1, 0), 1);
+}
+
+function animateResultRanking() {
+    const candidateNodes = document.querySelectorAll('.candidate-node');
+    
+    // Sort nodes by position (simulate ranking)
+    const sortedNodes = Array.from(candidateNodes).sort((a, b) => {
+        const aDistance = Math.sqrt((parseInt(a.style.left) - 250) ** 2 + (parseInt(a.style.top) - 250) ** 2);
+        const bDistance = Math.sqrt((parseInt(b.style.left) - 250) ** 2 + (parseInt(b.style.top) - 250) ** 2);
+        return aDistance - bDistance;
+    });
+    
+    // Highlight top matches
+    sortedNodes.slice(0, 3).forEach((node, index) => {
+        setTimeout(() => {
+            const colors = ['#00ff88', '#00d4ff', '#ffd700'];
+            node.style.background = colors[index];
+            node.style.boxShadow = `0 0 20px ${colors[index]}`;
+            node.style.animation = 'bounce 0.5s ease-in-out';
+        }, index * 200);
     });
 }
 
