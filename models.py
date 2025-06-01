@@ -21,6 +21,15 @@ class Candidate(db.Model):
     original_filename = db.Column(db.String(255), nullable=False)
     file_type = db.Column(db.String(10), nullable=False)  # pdf, docx, txt
     
+    # AI Analysis Results
+    vision_analysis = db.Column(db.Text)  # JSON string from OpenAI Vision analysis
+    text_embedding = db.Column(db.Text)  # JSON array of embedding vector
+    
+    # Additional extracted fields
+    languages = db.Column(db.Text)  # JSON string of languages
+    certifications = db.Column(db.Text)  # JSON string of certifications
+    summary = db.Column(db.Text)  # Professional summary
+    
     # Metadata
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
     updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)

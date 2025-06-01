@@ -7,6 +7,7 @@ from models import Candidate
 from parsers.pdf_parser import extract_text_from_pdf
 from parsers.docx_parser import extract_text_from_docx
 from parsers.text_cleaner import clean_and_extract_info
+from parsers.vision_parser import extract_cv_data_with_vision, generate_text_embedding
 from storage.sqlite_handler import search_candidates, get_all_candidates
 
 logger = logging.getLogger(__name__)
@@ -68,8 +69,36 @@ def upload_cv():
                     os.remove(filepath)
                     return redirect(request.url)
                 
-                # Clean and extract information
-                candidate_info = clean_and_extract_info(extracted_text)
+                # Try vision analysis first for better extraction
+                vision_data = {}
+                try:
+                    vision_data = extract_cv_data_with_vision(filepath, file_extension)
+                    logger.info(f"Vision analysis completed for {filename}")
+                except Exception as e:
+                    logger.warning(f"Vision analysis failed for {filename}: {str(e)}")
+                
+                # Fallback to traditional text extraction if vision fails
+                if not vision_data:
+                    candidate_info = clean_and_extract_info(extracted_text)
+                else:
+                    # Use vision data as primary source
+                    candidate_info = {
+                        'name': vision_data.get('name', 'Unknown'),
+                        'email': vision_data.get('email', ''),
+                        'phone': vision_data.get('phone', ''),
+                        'education': str(vision_data.get('education', [])) if vision_data.get('education') else '',
+                        'experience': str(vision_data.get('experience', [])) if vision_data.get('experience') else '',
+                        'skills': str(vision_data.get('skills', [])) if vision_data.get('skills') else ''
+                    }
+                
+                # Generate text embedding for semantic search
+                embedding = []
+                try:
+                    search_text = f"{candidate_info.get('name', '')} {candidate_info.get('skills', '')} {candidate_info.get('experience', '')} {extracted_text[:1000]}"
+                    embedding = generate_text_embedding(search_text)
+                    logger.info(f"Generated embedding for {filename}")
+                except Exception as e:
+                    logger.warning(f"Embedding generation failed for {filename}: {str(e)}")
                 
                 # Create new candidate record
                 candidate = Candidate(
@@ -79,6 +108,11 @@ def upload_cv():
                     education=candidate_info.get('education', ''),
                     experience=candidate_info.get('experience', ''),
                     skills=candidate_info.get('skills', ''),
+                    languages=str(vision_data.get('languages', [])) if vision_data.get('languages') else '',
+                    certifications=str(vision_data.get('certifications', [])) if vision_data.get('certifications') else '',
+                    summary=vision_data.get('summary', ''),
+                    vision_analysis=str(vision_data) if vision_data else '',
+                    text_embedding=str(embedding) if embedding else '',
                     full_text=extracted_text,
                     original_filename=filename,
                     file_type=file_extension
