@@ -119,34 +119,28 @@
                                         <td>
                                             {% if candidate.experience %}
                                                 {% set exp_data = candidate.experience %}
-                                                {% if exp_data.startswith('[') or exp_data.startswith('{') %}
-                                                    {% try %}
-                                                        {% set exp_list = exp_data|from_json %}
-                                                        {% if exp_list and exp_list|length > 0 %}
-                                                            <div class="small">
-                                                                {% for exp in exp_list[:2] %}
-                                                                    <div class="mb-1">
-                                                                        <strong>{{ exp.title if exp.title else exp.get('position', 'Puesto') }}</strong>
-                                                                        {% if exp.company %}
-                                                                            <br><small class="text-muted">{{ exp.company }}</small>
-                                                                        {% endif %}
-                                                                        {% if exp.duration %}
-                                                                            <br><small class="text-muted">{{ exp.duration }}</small>
-                                                                        {% endif %}
-                                                                    </div>
-                                                                {% endfor %}
-                                                                {% if exp_list|length > 2 %}
-                                                                    <small class="text-muted">+{{ exp_list|length - 2 }} más</small>
-                                                                {% endif %}
-                                                            </div>
-                                                        {% else %}
-                                                            <span class="text-muted small">Sin experiencia registrada</span>
-                                                        {% endif %}
-                                                    {% except %}
-                                                        <div class="small text-truncate" style="max-width: 150px;" title="{{ exp_data }}">
-                                                            {{ exp_data }}
+                                                {% if exp_data.startswith('[') %}
+                                                    {% set exp_list = exp_data|from_json %}
+                                                    {% if exp_list and exp_list|length > 0 %}
+                                                        <div class="small">
+                                                            {% for exp in exp_list[:2] %}
+                                                                <div class="mb-1">
+                                                                    <strong>{{ exp.title if exp.title else 'Puesto' }}</strong>
+                                                                    {% if exp.company %}
+                                                                        <br><small class="text-muted">{{ exp.company }}</small>
+                                                                    {% endif %}
+                                                                    {% if exp.duration %}
+                                                                        <br><small class="text-muted">{{ exp.duration }}</small>
+                                                                    {% endif %}
+                                                                </div>
+                                                            {% endfor %}
+                                                            {% if exp_list|length > 2 %}
+                                                                <small class="text-muted">+{{ exp_list|length - 2 }} más</small>
+                                                            {% endif %}
                                                         </div>
-                                                    {% endtry %}
+                                                    {% else %}
+                                                        <span class="text-muted small">Sin experiencia registrada</span>
+                                                    {% endif %}
                                                 {% else %}
                                                     <div class="small text-truncate" style="max-width: 150px;" title="{{ exp_data }}">
                                                         {{ exp_data }}
