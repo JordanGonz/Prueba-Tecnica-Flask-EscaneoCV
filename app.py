@@ -25,6 +25,12 @@ app.config["SQLALCHEMY_DATABASE_URI"] = database_url
 app.config["SQLALCHEMY_ENGINE_OPTIONS"] = {
     "pool_recycle": 300,
     "pool_pre_ping": True,
+    "pool_timeout": 20,
+    "max_overflow": 0,
+    "connect_args": {
+        "sslmode": "prefer",
+        "connect_timeout": 10,
+    }
 }
 
 # Configure upload settings

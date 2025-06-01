@@ -803,7 +803,6 @@ function performSemanticSearch(query) {
 
 function animateVectorSearch(query) {
     const scatterPlot = document.querySelector('.scatter-plot-3d');
-    const status = document.getElementById('searchStatus');
     
     console.log('Starting scatter plot search animation for:', query);
     
@@ -817,19 +816,14 @@ function animateVectorSearch(query) {
         point.style.transform = 'scale(1)';
     });
     
-    // Phase 1: Show search process
-    status.textContent = 'Generando embedding de consulta...';
+    // Clear any existing similarity labels
+    const existingLabels = scatterPlot.querySelectorAll('.similarity-label');
+    existingLabels.forEach(label => label.remove());
     
-    // Phase 2: Animate similarity calculation
+    // Phase 1: Animate similarity calculation
     setTimeout(() => {
-        status.textContent = 'Calculando similitudes vectoriales...';
         animateScatterSimilarity(scatterPlot);
-    }, 500);
-    
-    // Phase 3: Highlight matches when results arrive
-    setTimeout(() => {
-        status.textContent = 'Identificando mejores coincidencias...';
-    }, 1000);
+    }, 200);
 }
 
 function animateScatterSimilarity(scatterPlot) {
