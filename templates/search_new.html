@@ -353,55 +353,68 @@ function initializeVisualization() {
     
     // Show visualization immediately
     visualization.style.display = 'block';
+    status.textContent = 'Inicializando espacio vectorial 3D...';
     
-    // Load candidates data
-    fetch('/api/candidates-vectors')
-        .then(response => response.json())
-        .then(data => {
-            candidates = data.candidates || [];
-            document.getElementById('vectorCount').textContent = candidates.length;
-            
-            if (candidates.length > 0) {
-                status.textContent = `Espacio vectorial listo - ${candidates.length} candidatos`;
-                generateCandidateNodes();
-            } else {
-                visualization.style.display = 'block';
-                status.textContent = 'Subiendo CVs para generar vectores...';
-            }
-        })
-        .catch(error => {
-            console.error('Error loading candidates:', error);
-            visualization.style.display = 'block';
-            status.textContent = 'Inicializando espacio vectorial...';
-        });
+    // Always create the 3D space, even if no candidates yet
+    generateCandidateNodes();
 }
 
 function generateCandidateNodes() {
     const visualization = document.getElementById('vectorVisualization');
     
+    // Clear existing content
+    visualization.innerHTML = '';
+    
+    // Create 3D space container
+    const space3D = document.createElement('div');
+    space3D.className = 'vector-space-3d';
+    space3D.style.position = 'absolute';
+    space3D.style.width = '100%';
+    space3D.style.height = '100%';
+    space3D.style.transformStyle = 'preserve-3d';
+    space3D.style.transform = 'rotateX(15deg) rotateY(0deg)';
+    visualization.appendChild(space3D);
+    
+    // Add status display
+    const status = document.createElement('div');
+    status.id = 'searchStatus';
+    status.className = 'search-status';
+    status.textContent = 'Cargando espacio vectorial...';
+    space3D.appendChild(status);
+    
+    // Add vector count display
+    const vectorCount = document.createElement('div');
+    vectorCount.id = 'vectorCount';
+    vectorCount.className = 'vector-count';
+    vectorCount.textContent = '0';
+    space3D.appendChild(vectorCount);
+    
     // Get real embeddings from candidates
     fetch('/api/candidates-vectors-detailed')
         .then(response => response.json())
         .then(data => {
-            const candidatesWithEmbeddings = data.candidates;
+            console.log('Loaded candidates data:', data);
+            const candidatesWithEmbeddings = data.candidates || [];
             
-            // Create 3D space container
-            const space3D = document.createElement('div');
-            space3D.className = 'vector-space-3d';
-            space3D.style.position = 'absolute';
-            space3D.style.width = '100%';
-            space3D.style.height = '100%';
-            space3D.style.transformStyle = 'preserve-3d';
-            space3D.style.transform = 'rotateX(15deg) rotateY(0deg)';
-            visualization.appendChild(space3D);
+            // Update count display
+            vectorCount.textContent = candidatesWithEmbeddings.length;
             
-            // Generate candidate points with PCA-like distribution
-            candidatesWithEmbeddings.forEach((candidate, index) => {
-                createCandidatePoint(space3D, candidate, index, candidatesWithEmbeddings.length);
-            });
-            
-            // Generate additional ambient points for density
-            generateAmbientPoints(space3D, candidatesWithEmbeddings.length * 10);
+            if (candidatesWithEmbeddings.length > 0) {
+                status.textContent = `Espacio vectorial listo - ${candidatesWithEmbeddings.length} candidatos`;
+                
+                // Generate candidate points with PCA-like distribution
+                candidatesWithEmbeddings.forEach((candidate, index) => {
+                    createCandidatePoint(space3D, candidate, index, candidatesWithEmbeddings.length);
+                });
+                
+                // Generate additional ambient points for density (more points for better visualization)
+                const ambientCount = Math.max(100, candidatesWithEmbeddings.length * 20);
+                generateAmbientPoints(space3D, ambientCount);
+            } else {
+                status.textContent = 'No hay candidatos con embeddings. Sube algunos CVs primero.';
+                // Still generate some ambient points for demonstration
+                generateAmbientPoints(space3D, 150);
+            }
             
             // Add 3D rotation controls
             addRotationControls(space3D);
@@ -410,6 +423,10 @@ function generateCandidateNodes() {
         })
         .catch(error => {
             console.error('Error loading detailed candidates:', error);
+            status.textContent = 'Error cargando candidatos. Generando visualización demo...';
+            // Generate demo ambient points
+            generateAmbientPoints(space3D, 200);
+            addRotationControls(space3D);
         });
 }
 
