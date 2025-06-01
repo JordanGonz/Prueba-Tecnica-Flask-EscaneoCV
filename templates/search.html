@@ -313,6 +313,12 @@ function highlightSearchTerms(query) {
 
 function getTextNodes(element) {
     const textNodes = [];
+    
+    // Check if element exists and is a valid node
+    if (!element || !element.nodeType) {
+        return textNodes;
+    }
+    
     const walker = document.createTreeWalker(
         element,
         NodeFilter.SHOW_TEXT,
