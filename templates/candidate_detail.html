@@ -1,0 +1,299 @@
+{% extends "base.html" %}
+
+{% block title %}{{ candidate.name }} - Candidate Details - AI Recruitment System{% endblock %}
+
+{% block content %}
+<div class="row">
+    <div class="col-12">
+        <div class="d-flex justify-content-between align-items-center mb-4">
+            <div>
+                <h1 class="display-6">
+                    <i class="fas fa-user me-3"></i>
+                    {{ candidate.name }}
+                </h1>
+                <p class="text-muted mb-0">
+                    <i class="fas fa-calendar me-2"></i>
+                    Added on {{ candidate.created_at.strftime('%B %d, %Y at %H:%M') if candidate.created_at else 'Unknown date' }}
+                </p>
+            </div>
+            <div>
+                <a href="{{ url_for('candidates') }}" class="btn btn-outline-secondary me-2">
+                    <i class="fas fa-arrow-left me-2"></i>Back to Candidates
+                </a>
+                {% if candidate.email %}
+                    <a href="mailto:{{ candidate.email }}" class="btn btn-primary">
+                        <i class="fas fa-envelope me-2"></i>Send Email
+                    </a>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Candidate Overview -->
+<div class="row mb-4">
+    <div class="col-md-4">
+        <div class="card">
+            <div class="card-header">
+                <h5 class="card-title mb-0">
+                    <i class="fas fa-user-circle me-2"></i>
+                    Contact Information
+                </h5>
+            </div>
+            <div class="card-body">
+                <div class="text-center mb-3">
+                    <div class="bg-primary rounded-circle d-inline-flex align-items-center justify-content-center" 
+                         style="width: 80px; height: 80px;">
+                        <span class="text-white fw-bold fs-2">
+                            {{ candidate.name[0] if candidate.name else 'U' }}
+                        </span>
+                    </div>
+                </div>
+                
+                <div class="text-center">
+                    <h5 class="fw-bold">{{ candidate.name }}</h5>
+                    
+                    {% if candidate.email %}
+                        <div class="mb-2">
+                            <i class="fas fa-envelope text-muted me-2"></i>
+                            <a href="mailto:{{ candidate.email }}" class="text-decoration-none">
+                                {{ candidate.email }}
+                            </a>
+                        </div>
+                    {% endif %}
+                    
+                    {% if candidate.phone %}
+                        <div class="mb-2">
+                            <i class="fas fa-phone text-muted me-2"></i>
+                            <span>{{ candidate.phone }}</span>
+                        </div>
+                    {% endif %}
+                    
+                    {% if not candidate.email and not candidate.phone %}
+                        <p class="text-muted">No contact information available</p>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+        
+        <!-- File Information -->
+        <div class="card mt-3">
+            <div class="card-header">
+                <h6 class="card-title mb-0">
+                    <i class="fas fa-file-alt me-2"></i>
+                    File Information
+                </h6>
+            </div>
+            <div class="card-body">
+                <div class="row">
+                    <div class="col-6">
+                        <small class="text-muted">File Type</small>
+                        <div>
+                            <span class="badge bg-info text-uppercase">
+                                {{ candidate.file_type }}
+                            </span>
+                        </div>
+                    </div>
+                    <div class="col-6">
+                        <small class="text-muted">Original Name</small>
+                        <div class="small">
+                            {{ candidate.original_filename if candidate.original_filename else 'Unknown' }}
+                        </div>
+                    </div>
+                </div>
+                <hr>
+                <div>
+                    <small class="text-muted">Processing Date</small>
+                    <div class="small">
+                        {{ candidate.created_at.strftime('%Y-%m-%d %H:%M') if candidate.created_at else 'Unknown' }}
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <div class="col-md-8">
+        <!-- Skills Section -->
+        <div class="card mb-3">
+            <div class="card-header">
+                <h5 class="card-title mb-0">
+                    <i class="fas fa-cogs me-2"></i>
+                    Skills & Technologies
+                </h5>
+            </div>
+            <div class="card-body">
+                {% if candidate.skills %}
+                    {% set skills_list = candidate.skills|from_json if candidate.skills.startswith('[') else candidate.skills.split(',') %}
+                    {% if skills_list %}
+                        <div class="d-flex flex-wrap gap-2">
+                            {% for skill in skills_list %}
+                                <span class="badge bg-secondary">{{ skill|trim }}</span>
+                            {% endfor %}
+                        </div>
+                    {% else %}
+                        <p class="text-muted mb-0">No skills information available</p>
+                    {% endif %}
+                {% else %}
+                    <p class="text-muted mb-0">No skills information available</p>
+                {% endif %}
+            </div>
+        </div>
+        
+        <!-- Experience Section -->
+        <div class="card mb-3">
+            <div class="card-header">
+                <h5 class="card-title mb-0">
+                    <i class="fas fa-briefcase me-2"></i>
+                    Work Experience
+                </h5>
+            </div>
+            <div class="card-body">
+                {% if candidate.experience %}
+                    {% set exp_data = candidate.experience %}
+                    {% if exp_data.startswith('[') %}
+                        {% set exp_list = exp_data|from_json %}
+                        {% if exp_list %}
+                            {% for exp in exp_list %}
+                                <div class="border-start border-primary ps-3 mb-3">
+                                    <h6 class="fw-bold mb-1">{{ exp.title if exp.title else 'Position' }}</h6>
+                                    {% if exp.company %}
+                                        <p class="text-muted mb-2">{{ exp.company }}</p>
+                                    {% endif %}
+                                    {% if exp.details %}
+                                        <p class="small mb-0">{{ exp.details }}</p>
+                                    {% endif %}
+                                </div>
+                            {% endfor %}
+                        {% else %}
+                            <p class="text-muted mb-0">No work experience information available</p>
+                        {% endif %}
+                    {% else %}
+                        <div class="border-start border-primary ps-3">
+                            <p class="mb-0">{{ exp_data }}</p>
+                        </div>
+                    {% endif %}
+                {% else %}
+                    <p class="text-muted mb-0">No work experience information available</p>
+                {% endif %}
+            </div>
+        </div>
+        
+        <!-- Education Section -->
+        <div class="card">
+            <div class="card-header">
+                <h5 class="card-title mb-0">
+                    <i class="fas fa-graduation-cap me-2"></i>
+                    Education
+                </h5>
+            </div>
+            <div class="card-body">
+                {% if candidate.education %}
+                    {% set edu_data = candidate.education %}
+                    {% if edu_data.startswith('[') %}
+                        {% set edu_list = edu_data|from_json %}
+                        {% if edu_list %}
+                            {% for edu in edu_list %}
+                                <div class="border-start border-success ps-3 mb-3">
+                                    <h6 class="fw-bold mb-1">{{ edu.degree if edu.degree else 'Degree' }}</h6>
+                                    {% if edu.field %}
+                                        <p class="text-muted mb-2">{{ edu.field }}</p>
+                                    {% endif %}
+                                    {% if edu.details %}
+                                        <p class="small mb-0">{{ edu.details }}</p>
+                                    {% endif %}
+                                </div>
+                            {% endfor %}
+                        {% else %}
+                            <p class="text-muted mb-0">No education information available</p>
+                        {% endif %}
+                    {% else %}
+                        <div class="border-start border-success ps-3">
+                            <p class="mb-0">{{ edu_data }}</p>
+                        </div>
+                    {% endif %}
+                {% else %}
+                    <p class="text-muted mb-0">No education information available</p>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Full CV Content -->
+<div class="row mt-4">
+    <div class="col-12">
+        <div class="card">
+            <div class="card-header d-flex justify-content-between align-items-center">
+                <h5 class="card-title mb-0">
+                    <i class="fas fa-file-text me-2"></i>
+                    Complete CV Content
+                </h5>
+                <button type="button" class="btn btn-sm btn-outline-secondary" onclick="copyToClipboard(document.getElementById('fullText').textContent)">
+                    <i class="fas fa-copy me-1"></i>Copy
+                </button>
+            </div>
+            <div class="card-body">
+                <div class="bg-light p-3 rounded" style="max-height: 400px; overflow-y: auto;">
+                    <pre id="fullText" class="mb-0" style="white-space: pre-wrap; word-wrap: break-word;">{{ candidate.full_text }}</pre>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+{% endblock %}
+
+{% block extra_scripts %}
+<script>
+function copyToClipboard(text) {
+    if (navigator.clipboard) {
+        navigator.clipboard.writeText(text).then(function() {
+            showNotification('CV content copied to clipboard', 'success', 2000);
+        }).catch(function() {
+            fallbackCopyToClipboard(text);
+        });
+    } else {
+        fallbackCopyToClipboard(text);
+    }
+}
+
+function fallbackCopyToClipboard(text) {
+    const textArea = document.createElement("textarea");
+    textArea.value = text;
+    document.body.appendChild(textArea);
+    textArea.focus();
+    textArea.select();
+    
+    try {
+        document.execCommand('copy');
+        showNotification('CV content copied to clipboard', 'success', 2000);
+    } catch (err) {
+        showNotification('Could not copy to clipboard', 'error');
+    }
+    
+    document.body.removeChild(textArea);
+}
+
+function showNotification(message, type, duration = 3000) {
+    const alertClass = type === 'error' ? 'danger' : type;
+    const notificationHtml = `
+        <div class="alert alert-${alertClass} alert-dismissible fade show position-fixed" 
+             style="top: 20px; right: 20px; z-index: 9999; min-width: 300px;" 
+             id="notification-${Date.now()}">
+            ${message}
+            <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+        </div>
+    `;
+    
+    document.body.insertAdjacentHTML('beforeend', notificationHtml);
+    
+    const notification = document.body.lastElementChild;
+    setTimeout(function() {
+        if (notification && notification.parentNode) {
+            const bsAlert = new bootstrap.Alert(notification);
+            bsAlert.close();
+        }
+    }, duration);
+}
+</script>
+{% endblock %}

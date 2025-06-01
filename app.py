@@ -1,4 +1,5 @@
 import os
+import json
 import logging
 from flask import Flask
 from flask_sqlalchemy import SQLAlchemy
@@ -43,6 +44,17 @@ with app.app_context():
     
     # Import and register routes
     import routes  # noqa: F401
+
+# Add custom Jinja2 filters
+@app.template_filter('from_json')
+def from_json_filter(value):
+    """Convert JSON string to Python object"""
+    try:
+        if isinstance(value, str) and value.strip().startswith('['):
+            return json.loads(value)
+        return []
+    except (json.JSONDecodeError, TypeError, ValueError):
+        return []
 
 if __name__ == "__main__":
     app.run(host="0.0.0.0", port=5000, debug=True)
