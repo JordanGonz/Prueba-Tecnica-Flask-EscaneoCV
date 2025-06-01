@@ -431,35 +431,45 @@ function animateVectorSearch(query) {
     const visualization = document.getElementById('vectorVisualization');
     const status = document.getElementById('searchStatus');
     
-    // Create search waves
-    const wave1 = createSearchWave();
-    const wave2 = createSearchWave();
-    const wave3 = createSearchWave();
+    console.log('Starting vector search animation for:', query);
     
-    visualization.appendChild(wave1);
-    setTimeout(() => visualization.appendChild(wave2), 300);
-    setTimeout(() => visualization.appendChild(wave3), 600);
+    // Make sure visualization is visible
+    visualization.style.display = 'block';
+    visualization.style.opacity = '1';
     
-    // Create query particles
-    for (let i = 0; i < 20; i++) {
+    // Create multiple search waves with delays
+    for (let i = 0; i < 5; i++) {
         setTimeout(() => {
-            createQueryParticle();
-        }, i * 100);
+            const wave = createSearchWave();
+            visualization.appendChild(wave);
+        }, i * 400);
     }
+    
+    // Create animated particles continuously
+    const particleInterval = setInterval(() => {
+        createQueryParticle();
+    }, 150);
+    
+    // Stop particles after 3 seconds
+    setTimeout(() => {
+        clearInterval(particleInterval);
+    }, 3000);
     
     // Update status with animated text
     const statusMessages = [
-        'Analizando consulta con IA...',
-        'Generando embeddings vectoriales...',
-        'Calculando similitud semántica...',
-        'Procesando espacio vectorial...',
-        'Identificando mejores coincidencias...'
+        '🔍 Analizando consulta con IA...',
+        '🧠 Generando embeddings vectoriales...',
+        '⚡ Calculando similitud semántica...',
+        '🌌 Procesando espacio vectorial...',
+        '🎯 Identificando mejores coincidencias...'
     ];
     
     statusMessages.forEach((message, index) => {
         setTimeout(() => {
             status.textContent = message;
-        }, index * 400);
+            status.style.fontSize = '18px';
+            status.style.fontWeight = 'bold';
+        }, index * 500);
     });
 }
 
@@ -485,39 +495,57 @@ function createSearchWave() {
 
 function createQueryParticle() {
     const particle = document.createElement('div');
-    particle.className = 'search-particle query-particle';
+    particle.style.position = 'absolute';
+    particle.style.borderRadius = '50%';
+    particle.style.pointerEvents = 'none';
+    particle.style.zIndex = '5';
     
-    const size = 3 + Math.random() * 5;
+    const size = 6 + Math.random() * 8;
     particle.style.width = size + 'px';
     particle.style.height = size + 'px';
+    particle.style.background = 'radial-gradient(circle, #00ff88 0%, #00d4ff 100%)';
+    particle.style.boxShadow = '0 0 15px #00ff88';
     
     const visualization = document.getElementById('vectorVisualization');
-    const rect = visualization.getBoundingClientRect();
     
-    const x = Math.random() * rect.width;
-    const y = Math.random() * rect.height;
+    const x = Math.random() * 450 + 25; // Keep within bounds
+    const y = Math.random() * 450 + 25;
     
     particle.style.left = x + 'px';
     particle.style.top = y + 'px';
-    particle.style.opacity = '0.8';
+    particle.style.opacity = '1';
     
     visualization.appendChild(particle);
     
-    // Animate particle movement
-    const targetX = rect.width / 2;
-    const targetY = rect.height / 2;
+    // Simple movement animation
+    const targetX = 250; // Center
+    const targetY = 250;
     
-    particle.animate([
-        { left: x + 'px', top: y + 'px', opacity: '0.8' },
-        { left: targetX + 'px', top: targetY + 'px', opacity: '0' }
-    ], {
-        duration: 1500,
-        easing: 'ease-in-out'
-    }).onfinish = () => {
-        if (particle.parentNode) {
-            particle.parentNode.removeChild(particle);
+    let startTime = Date.now();
+    const duration = 2000;
+    
+    function animateParticle() {
+        const elapsed = Date.now() - startTime;
+        const progress = Math.min(elapsed / duration, 1);
+        
+        const currentX = x + (targetX - x) * progress;
+        const currentY = y + (targetY - y) * progress;
+        const currentOpacity = 1 - progress;
+        
+        particle.style.left = currentX + 'px';
+        particle.style.top = currentY + 'px';
+        particle.style.opacity = currentOpacity;
+        
+        if (progress < 1) {
+            requestAnimationFrame(animateParticle);
+        } else {
+            if (particle.parentNode) {
+                particle.parentNode.removeChild(particle);
+            }
         }
-    };
+    }
+    
+    requestAnimationFrame(animateParticle);
 }
 
 function highlightMatchedCandidates(results) {
