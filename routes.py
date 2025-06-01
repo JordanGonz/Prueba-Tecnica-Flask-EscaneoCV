@@ -200,6 +200,24 @@ def view_candidate(candidate_id):
         flash(f'Error fetching candidate: {str(e)}', 'error')
         return redirect(url_for('candidates'))
 
+@app.route('/candidate/<int:candidate_id>/delete', methods=['POST'])
+def delete_candidate(candidate_id):
+    """Delete a candidate"""
+    try:
+        candidate = Candidate.query.get_or_404(candidate_id)
+        candidate_name = candidate.name
+        
+        db.session.delete(candidate)
+        db.session.commit()
+        
+        flash(f'Candidato {candidate_name} eliminado exitosamente', 'success')
+        logger.info(f"Deleted candidate: {candidate_name} (ID: {candidate_id})")
+        
+        return jsonify({'success': True, 'message': 'Candidato eliminado'})
+    except Exception as e:
+        logger.error(f"Error deleting candidate {candidate_id}: {str(e)}")
+        return jsonify({'success': False, 'message': str(e)}), 500
+
 @app.route('/healthcheck')
 def healthcheck():
     """Health check endpoint"""

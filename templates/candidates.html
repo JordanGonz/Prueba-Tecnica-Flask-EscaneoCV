@@ -263,18 +263,18 @@
             <div class="modal-header">
                 <h5 class="modal-title">
                     <i class="fas fa-exclamation-triangle text-warning me-2"></i>
-                    Confirm Delete
+                    Confirmar Eliminación
                 </h5>
                 <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
             </div>
             <div class="modal-body">
-                <p>Are you sure you want to delete the candidate <strong id="candidateName"></strong>?</p>
-                <p class="text-muted small mb-0">This action cannot be undone.</p>
+                <p>¿Estás seguro de que quieres eliminar al candidato <strong id="candidateName"></strong>?</p>
+                <p class="text-muted small mb-0">Esta acción no se puede deshacer.</p>
             </div>
             <div class="modal-footer">
-                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
                 <button type="button" class="btn btn-danger" id="confirmDeleteBtn">
-                    <i class="fas fa-trash me-2"></i>Delete
+                    <i class="fas fa-trash me-2"></i>Eliminar
                 </button>
             </div>
         </div>
@@ -296,9 +296,27 @@ function confirmDelete(candidateId, candidateName) {
 
 document.getElementById('confirmDeleteBtn').addEventListener('click', function() {
     if (candidateToDelete) {
-        // Here you would typically make an AJAX call to delete the candidate
-        // For now, we'll just show an alert since we don't have a delete endpoint
-        alert('Delete functionality would be implemented here');
+        fetch(`/candidate/${candidateToDelete}/delete`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+            }
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                showNotification('Candidato eliminado exitosamente', 'success');
+                // Reload the page to update the candidate list
+                setTimeout(() => {
+                    window.location.reload();
+                }, 1000);
+            } else {
+                showNotification('Error al eliminar candidato: ' + data.message, 'error');
+            }
+        })
+        .catch(error => {
+            showNotification('Error de conexión: ' + error.message, 'error');
+        });
         
         const modal = bootstrap.Modal.getInstance(document.getElementById('deleteModal'));
         modal.hide();
