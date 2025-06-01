@@ -282,7 +282,14 @@ def search_candidates_semantic(query: str, candidate_embeddings: List[Dict], top
         # Sort by similarity and return top k
         results.sort(key=lambda x: x['similarity'], reverse=True)
         
-        return [r['candidate'] for r in results[:top_k]]
+        # Return candidates with similarity scores
+        top_results = []
+        for r in results[:top_k]:
+            candidate = r['candidate'].copy()
+            candidate['similarity'] = r['similarity']
+            top_results.append(candidate)
+        
+        return top_results
         
     except Exception as e:
         logger.error(f"Error in semantic search: {str(e)}")
