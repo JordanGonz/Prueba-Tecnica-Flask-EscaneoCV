@@ -229,41 +229,129 @@ def extract_experience(text: str) -> str:
     try:
         experience_info = []
         
-        # Look for experience keywords
+        # Look for experience keywords (multilingual support)
         experience_keywords = [
             'experience', 'work', 'employment', 'career', 'professional',
-            'position', 'role', 'job'
+            'position', 'role', 'job', 'experiencia', 'trabajo', 'empleo',
+            'carrera', 'puesto', 'laboral', 'profesional', 'cargo'
         ]
         
-        lines = text.lower().split('\n')
+        # Common job titles patterns
+        job_title_patterns = [
+            r'\b(director|manager|analista|desarrollador|programador|ingeniero|coordinador|especialista|consultor|supervisor|jefe|gerente|líder|lead|senior|junior)\b',
+            r'\b(developer|analyst|engineer|coordinator|specialist|consultant|supervisor|chief|manager|leader)\b'
+        ]
+        
+        # Company indicators
+        company_indicators = [
+            r'\b(company|empresa|corporation|corp|inc|ltd|llc|s\.a\.|s\.l\.|ltda)\b',
+            r'\b(universidad|university|instituto|institute|hospital|clinic|bank|banco)\b'
+        ]
+        
+        lines = text.split('\n')
         experience_section = False
+        current_experience = {}
         
         for i, line in enumerate(lines):
-            # Check if we're in experience section
-            if any(keyword in line for keyword in experience_keywords):
+            line_lower = line.lower().strip()
+            line_clean = line.strip()
+            
+            # Skip empty lines
+            if not line_clean:
+                continue
+            
+            # Check if we're entering experience section
+            if any(keyword in line_lower for keyword in experience_keywords):
                 experience_section = True
                 continue
             
-            # Stop if we hit another major section
-            if experience_section and any(word in line for word in ['education', 'skills', 'qualification']):
+            # Stop if we hit education or skills section
+            if experience_section and any(word in line_lower for word in ['education', 'educación', 'formación', 'skills', 'habilidades', 'competencias']):
+                if current_experience:
+                    experience_info.append(current_experience)
                 break
             
-            # Extract experience entries
-            if experience_section and line.strip():
-                # Look for job title and company patterns
-                job_patterns = [
-                    r'([a-zA-Z\s]+?)\s+(?:at|@)\s+([a-zA-Z\s]+)',
-                    r'([a-zA-Z\s]+?)\s*[-–]\s*([a-zA-Z\s]+)',
+            # If we're in experience section, try to extract information
+            if experience_section and line_clean:
+                # Check for job title patterns
+                job_title_found = False
+                for pattern in job_title_patterns:
+                    if re.search(pattern, line_lower):
+                        if current_experience:
+                            experience_info.append(current_experience)
+                        current_experience = {
+                            'title': line_clean,
+                            'company': '',
+                            'details': line_clean
+                        }
+                        job_title_found = True
+                        break
+                
+                # Check for company patterns
+                if not job_title_found and any(re.search(pattern, line_lower) for pattern in company_indicators):
+                    if current_experience:
+                        current_experience['company'] = line_clean
+                    else:
+                        current_experience = {
+                            'title': '',
+                            'company': line_clean,
+                            'details': line_clean
+                        }
+                
+                # Check for date patterns (years of experience)
+                date_patterns = [
+                    r'\b(19|20)\d{2}\s*[-–]\s*(19|20)\d{2}\b',
+                    r'\b(19|20)\d{2}\s*[-–]\s*(present|actual|presente)\b',
+                    r'\b\d{1,2}\s+(years?|años?)\b'
                 ]
                 
-                for pattern in job_patterns:
-                    match = re.search(pattern, line)
-                    if match:
-                        experience_info.append({
+                if any(re.search(pattern, line_lower) for pattern in date_patterns):
+                    if current_experience:
+                        current_experience['details'] += f" | {line_clean}"
+                    else:
+                        current_experience = {
+                            'title': '',
+                            'company': '',
+                            'details': line_clean
+                        }
+                
+                # Look for "at" or "en" patterns for company
+                at_patterns = [
+                    r'(.+?)\s+(?:at|en|@)\s+(.+)',
+                    r'(.+?)\s*[-–]\s*(.+)'
+                ]
+                
+                for pattern in at_patterns:
+                    match = re.search(pattern, line_clean)
+                    if match and not job_title_found:
+                        if current_experience:
+                            experience_info.append(current_experience)
+                        current_experience = {
                             'title': match.group(1).strip(),
                             'company': match.group(2).strip(),
-                            'details': line.strip()
-                        })
+                            'details': line_clean
+                        }
+                        break
+        
+        # Add the last experience if exists
+        if current_experience and experience_section:
+            experience_info.append(current_experience)
+        
+        # If no structured experience found but we found experience section, add as general text
+        if not experience_info and experience_section:
+            # Try to find any work-related content
+            work_content = []
+            for line in lines:
+                line_clean = line.strip()
+                if line_clean and any(keyword in line.lower() for keyword in ['work', 'job', 'company', 'position', 'role', 'empresa', 'trabajo', 'puesto']):
+                    work_content.append(line_clean)
+            
+            if work_content:
+                experience_info.append({
+                    'title': 'Work Experience',
+                    'company': '',
+                    'details': ' | '.join(work_content[:3])  # Limit to first 3 relevant lines
+                })
         
         return json.dumps(experience_info) if experience_info else ''
         
