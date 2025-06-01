@@ -6,14 +6,15 @@
 <style>
 #vectorVisualization {
     width: 100%;
-    height: 500px;
-    background: radial-gradient(circle at center, #0f0f23 0%, #1a1a2e 50%, #16213e 100%);
+    height: 600px;
+    background: linear-gradient(135deg, #0a0a1a 0%, #1a1a3a 50%, #2a1a4a 100%);
     border-radius: 15px;
     position: relative;
     overflow: hidden;
     display: block;
-    border: 2px solid #333;
+    border: 1px solid #444;
     margin-top: 1rem;
+    perspective: 1000px;
 }
 
 .search-particle {
@@ -384,50 +385,216 @@ function generateCandidateNodes() {
         .then(data => {
             const candidatesWithEmbeddings = data.candidates;
             
+            // Create 3D space container
+            const space3D = document.createElement('div');
+            space3D.className = 'vector-space-3d';
+            space3D.style.position = 'absolute';
+            space3D.style.width = '100%';
+            space3D.style.height = '100%';
+            space3D.style.transformStyle = 'preserve-3d';
+            space3D.style.transform = 'rotateX(15deg) rotateY(0deg)';
+            visualization.appendChild(space3D);
+            
+            // Generate candidate points with PCA-like distribution
             candidatesWithEmbeddings.forEach((candidate, index) => {
-                const node = document.createElement('div');
-                node.className = 'candidate-node';
-                node.style.width = '15px';
-                node.style.height = '15px';
-                
-                // Position based on first 2 dimensions of actual embedding vector
-                if (candidate.embedding && candidate.embedding.length >= 2) {
-                    // Normalize embedding dimensions to visualization space
-                    const x = mapEmbeddingToVisualization(candidate.embedding[0], 50, 450);
-                    const y = mapEmbeddingToVisualization(candidate.embedding[1], 50, 450);
-                    
-                    node.style.left = x + 'px';
-                    node.style.top = y + 'px';
-                } else {
-                    // Fallback positioning
-                    const angle = (index / candidatesWithEmbeddings.length) * 2 * Math.PI;
-                    const radius = 100 + Math.random() * 150;
-                    const x = 250 + Math.cos(angle) * radius;
-                    const y = 250 + Math.sin(angle) * radius;
-                    
-                    node.style.left = Math.max(10, Math.min(x, 490)) + 'px';
-                    node.style.top = Math.max(10, Math.min(y, 490)) + 'px';
-                }
-                
-                node.setAttribute('data-candidate-id', candidate.id);
-                node.setAttribute('data-candidate-name', candidate.name);
-                node.setAttribute('data-embedding', JSON.stringify(candidate.embedding));
-                
-                // Add hover tooltip with candidate info
-                node.title = `${candidate.name}\nHabilidades: ${candidate.skills ? JSON.parse(candidate.skills).slice(0,3).join(', ') : 'N/A'}`;
-                
-                node.addEventListener('click', () => {
-                    window.open(`/candidate/${candidate.id}`, '_blank');
-                });
-                
-                visualization.appendChild(node);
+                createCandidatePoint(space3D, candidate, index, candidatesWithEmbeddings.length);
             });
+            
+            // Generate additional ambient points for density
+            generateAmbientPoints(space3D, candidatesWithEmbeddings.length * 10);
+            
+            // Add 3D rotation controls
+            addRotationControls(space3D);
             
             candidates = candidatesWithEmbeddings;
         })
         .catch(error => {
             console.error('Error loading detailed candidates:', error);
         });
+}
+
+function createCandidatePoint(space3D, candidate, index, total) {
+    const point = document.createElement('div');
+    point.className = 'vector-point candidate-point';
+    
+    // Use PCA-like positioning based on actual embeddings
+    let x, y, z;
+    if (candidate.embedding && candidate.embedding.length >= 3) {
+        // Use first 3 dimensions with PCA transformation
+        const pca = performPCA(candidate.embedding.slice(0, 50)); // Use first 50 dims
+        x = mapToSpace(pca[0], 100, 500);
+        y = mapToSpace(pca[1], 100, 500);
+        z = mapToSpace(pca[2], -100, 100);
+    } else {
+        // Cluster-like fallback distribution
+        const cluster = Math.floor(index / (total / 3));
+        const clusterCenters = [
+            {x: 200, y: 200, z: 0},
+            {x: 400, y: 300, z: 50},
+            {x: 300, y: 150, z: -30}
+        ];
+        const center = clusterCenters[cluster] || clusterCenters[0];
+        x = center.x + (Math.random() - 0.5) * 120;
+        y = center.y + (Math.random() - 0.5) * 120;
+        z = center.z + (Math.random() - 0.5) * 60;
+    }
+    
+    // Style the point
+    point.style.position = 'absolute';
+    point.style.width = '6px';
+    point.style.height = '6px';
+    point.style.borderRadius = '50%';
+    point.style.background = 'radial-gradient(circle, #4a9eff 0%, #2d5aa0 100%)';
+    point.style.boxShadow = '0 0 8px rgba(74, 158, 255, 0.6)';
+    point.style.left = x + 'px';
+    point.style.top = y + 'px';
+    point.style.transform = `translateZ(${z}px)`;
+    point.style.transition = 'all 0.3s ease';
+    point.style.cursor = 'pointer';
+    point.style.zIndex = '10';
+    
+    // Store data
+    point.setAttribute('data-candidate-id', candidate.id);
+    point.setAttribute('data-candidate-name', candidate.name);
+    point.setAttribute('data-embedding', JSON.stringify(candidate.embedding));
+    point.setAttribute('data-original-pos', JSON.stringify({x, y, z}));
+    
+    // Hover effects
+    point.addEventListener('mouseenter', () => {
+        point.style.transform = `translateZ(${z + 20}px) scale(2)`;
+        point.style.background = 'radial-gradient(circle, #ff6b6b 0%, #ee5a24 100%)';
+        point.style.boxShadow = '0 0 15px rgba(255, 107, 107, 0.8)';
+        
+        // Show tooltip
+        showPointTooltip(point, candidate);
+    });
+    
+    point.addEventListener('mouseleave', () => {
+        point.style.transform = `translateZ(${z}px) scale(1)`;
+        point.style.background = 'radial-gradient(circle, #4a9eff 0%, #2d5aa0 100%)';
+        point.style.boxShadow = '0 0 8px rgba(74, 158, 255, 0.6)';
+        hidePointTooltip();
+    });
+    
+    point.addEventListener('click', () => {
+        window.open(`/candidate/${candidate.id}`, '_blank');
+    });
+    
+    space3D.appendChild(point);
+}
+
+function generateAmbientPoints(space3D, count) {
+    for (let i = 0; i < count; i++) {
+        const point = document.createElement('div');
+        point.className = 'vector-point ambient-point';
+        
+        // Random distribution with some clustering
+        const x = Math.random() * 600;
+        const y = Math.random() * 600;
+        const z = (Math.random() - 0.5) * 200;
+        
+        point.style.position = 'absolute';
+        point.style.width = '2px';
+        point.style.height = '2px';
+        point.style.borderRadius = '50%';
+        point.style.background = `rgba(100, 150, 255, ${0.3 + Math.random() * 0.4})`;
+        point.style.left = x + 'px';
+        point.style.top = y + 'px';
+        point.style.transform = `translateZ(${z}px)`;
+        point.style.pointerEvents = 'none';
+        
+        space3D.appendChild(point);
+    }
+}
+
+function performPCA(embedding) {
+    // Simplified PCA for 3D projection
+    const mean = embedding.reduce((sum, val) => sum + val, 0) / embedding.length;
+    const centered = embedding.map(val => val - mean);
+    
+    // Simple projection to 3 dimensions
+    return [
+        centered.slice(0, 17).reduce((sum, val) => sum + val, 0),
+        centered.slice(17, 34).reduce((sum, val) => sum + val, 0),
+        centered.slice(34, 51).reduce((sum, val) => sum + val, 0)
+    ];
+}
+
+function mapToSpace(value, min, max) {
+    const normalized = Math.tanh(value / 10); // Normalize to [-1, 1]
+    return min + (normalized + 1) * (max - min) / 2;
+}
+
+function addRotationControls(space3D) {
+    let rotationX = 15;
+    let rotationY = 0;
+    let isRotating = false;
+    
+    const visualization = document.getElementById('vectorVisualization');
+    
+    // Auto-rotation
+    const autoRotate = setInterval(() => {
+        if (!isRotating) {
+            rotationY += 0.5;
+            space3D.style.transform = `rotateX(${rotationX}deg) rotateY(${rotationY}deg)`;
+        }
+    }, 100);
+    
+    // Manual rotation with mouse
+    visualization.addEventListener('mousedown', (e) => {
+        isRotating = true;
+        const startX = e.clientX;
+        const startY = e.clientY;
+        
+        const handleMouseMove = (e) => {
+            const deltaX = e.clientX - startX;
+            const deltaY = e.clientY - startY;
+            
+            rotationY += deltaX * 0.5;
+            rotationX -= deltaY * 0.5;
+            rotationX = Math.max(-60, Math.min(60, rotationX));
+            
+            space3D.style.transform = `rotateX(${rotationX}deg) rotateY(${rotationY}deg)`;
+        };
+        
+        const handleMouseUp = () => {
+            isRotating = false;
+            document.removeEventListener('mousemove', handleMouseMove);
+            document.removeEventListener('mouseup', handleMouseUp);
+        };
+        
+        document.addEventListener('mousemove', handleMouseMove);
+        document.addEventListener('mouseup', handleMouseUp);
+    });
+}
+
+function showPointTooltip(point, candidate) {
+    const tooltip = document.createElement('div');
+    tooltip.className = 'point-tooltip';
+    tooltip.innerHTML = `
+        <div style="font-weight: bold; color: #fff;">${candidate.name}</div>
+        <div style="color: #ccc; font-size: 12px;">${candidate.email || 'Sin email'}</div>
+        <div style="color: #9cf; font-size: 11px;">Habilidades: ${candidate.skills ? JSON.parse(candidate.skills).slice(0,2).join(', ') : 'N/A'}</div>
+    `;
+    tooltip.style.position = 'absolute';
+    tooltip.style.background = 'rgba(0, 0, 0, 0.9)';
+    tooltip.style.padding = '8px';
+    tooltip.style.borderRadius = '6px';
+    tooltip.style.fontSize = '12px';
+    tooltip.style.zIndex = '1000';
+    tooltip.style.pointerEvents = 'none';
+    tooltip.style.border = '1px solid #555';
+    tooltip.style.left = (parseInt(point.style.left) + 20) + 'px';
+    tooltip.style.top = (parseInt(point.style.top) - 20) + 'px';
+    
+    point.parentNode.appendChild(tooltip);
+}
+
+function hidePointTooltip() {
+    const tooltip = document.querySelector('.point-tooltip');
+    if (tooltip) {
+        tooltip.remove();
+    }
 }
 
 function mapEmbeddingToVisualization(embeddingValue, min, max) {
@@ -495,33 +662,169 @@ function performSemanticSearch(query) {
 function animateVectorSearch(query) {
     const visualization = document.getElementById('vectorVisualization');
     const status = document.getElementById('searchStatus');
+    const space3D = document.querySelector('.vector-space-3d');
     
     console.log('Starting advanced vector search animation for:', query);
     
-    // Clear previous search animations
-    document.querySelectorAll('.search-vector, .similarity-line').forEach(el => el.remove());
-    
-    // Create query vector in center
-    const queryVector = createQueryVector();
-    visualization.appendChild(queryVector);
+    if (!space3D) return;
     
     // Phase 1: Generate query embedding
-    setTimeout(() => {
-        status.textContent = '🧠 Generando embedding de consulta...';
-        animateQueryEmbeddingGeneration(queryVector);
-    }, 200);
+    status.textContent = 'Generando embedding de consulta...';
+    const queryPoint = createQueryPoint(space3D);
     
     // Phase 2: Calculate similarities with all candidates
     setTimeout(() => {
-        status.textContent = '⚡ Calculando similitudes vectoriales...';
-        animateVectorSimilarityCalculation();
-    }, 1000);
+        status.textContent = 'Calculando similitudes vectoriales...';
+        animateVectorSimilarityCalculation3D(space3D, queryPoint);
+    }, 500);
     
-    // Phase 3: Rank results
+    // Phase 3: Highlight matches
     setTimeout(() => {
-        status.textContent = '📊 Ordenando por similitud semántica...';
-        animateResultRanking();
-    }, 2000);
+        status.textContent = 'Identificando mejores coincidencias...';
+        highlightTopMatches(space3D);
+    }, 1500);
+}
+
+function createQueryPoint(space3D) {
+    const queryPoint = document.createElement('div');
+    queryPoint.className = 'vector-point query-point';
+    queryPoint.style.position = 'absolute';
+    queryPoint.style.width = '12px';
+    queryPoint.style.height = '12px';
+    queryPoint.style.borderRadius = '50%';
+    queryPoint.style.background = 'radial-gradient(circle, #ff4757 0%, #c44569 100%)';
+    queryPoint.style.boxShadow = '0 0 20px rgba(255, 71, 87, 0.8)';
+    queryPoint.style.left = '300px';
+    queryPoint.style.top = '300px';
+    queryPoint.style.transform = 'translateZ(0px) scale(1.5)';
+    queryPoint.style.border = '2px solid #ffffff';
+    queryPoint.style.animation = 'pulse 1.5s infinite';
+    queryPoint.style.zIndex = '50';
+    
+    space3D.appendChild(queryPoint);
+    return queryPoint;
+}
+
+function animateVectorSimilarityCalculation3D(space3D, queryPoint) {
+    const candidatePoints = space3D.querySelectorAll('.candidate-point');
+    const queryPos = {
+        x: parseInt(queryPoint.style.left),
+        y: parseInt(queryPoint.style.top),
+        z: 0
+    };
+    
+    candidatePoints.forEach((point, index) => {
+        setTimeout(() => {
+            // Calculate distance for visual similarity
+            const pointPos = {
+                x: parseInt(point.style.left),
+                y: parseInt(point.style.top),
+                z: parseFloat(point.style.transform.match(/translateZ\(([^)]+)px\)/)?.[1] || 0)
+            };
+            
+            const distance = Math.sqrt(
+                Math.pow(queryPos.x - pointPos.x, 2) + 
+                Math.pow(queryPos.y - pointPos.y, 2) + 
+                Math.pow(queryPos.z - pointPos.z, 2)
+            );
+            
+            // Create connection line
+            const line = createConnectionLine3D(queryPos, pointPos, distance);
+            space3D.appendChild(line);
+            
+            // Animate point
+            point.style.transform = `translateZ(${pointPos.z}px) scale(1.8)`;
+            const similarity = Math.max(0, 1 - distance / 500);
+            const intensity = similarity * 0.8 + 0.2;
+            
+            if (similarity > 0.3) {
+                point.style.background = `radial-gradient(circle, rgba(0, 255, 136, ${intensity}) 0%, rgba(0, 212, 255, ${intensity * 0.8}) 100%)`;
+                point.style.boxShadow = `0 0 15px rgba(0, 255, 136, ${intensity})`;
+            }
+            
+            // Clean up after animation
+            setTimeout(() => {
+                point.style.transform = `translateZ(${pointPos.z}px) scale(1)`;
+                if (line.parentNode) line.parentNode.removeChild(line);
+            }, 1000);
+            
+        }, index * 100);
+    });
+}
+
+function createConnectionLine3D(pos1, pos2, distance) {
+    const line = document.createElement('div');
+    line.className = 'connection-line-3d';
+    
+    const length = Math.sqrt(
+        Math.pow(pos2.x - pos1.x, 2) + 
+        Math.pow(pos2.y - pos1.y, 2)
+    );
+    const angle = Math.atan2(pos2.y - pos1.y, pos2.x - pos1.x) * 180 / Math.PI;
+    
+    const similarity = Math.max(0, 1 - distance / 500);
+    const opacity = similarity * 0.6 + 0.1;
+    
+    line.style.position = 'absolute';
+    line.style.width = length + 'px';
+    line.style.height = '1px';
+    line.style.background = `linear-gradient(90deg, 
+        rgba(255, 71, 87, ${opacity}) 0%, 
+        rgba(0, 255, 136, ${opacity}) 100%)`;
+    line.style.left = pos1.x + 'px';
+    line.style.top = pos1.y + 'px';
+    line.style.transformOrigin = '0 50%';
+    line.style.transform = `rotate(${angle}deg) translateZ(${(pos1.z + pos2.z) / 2}px)`;
+    line.style.animation = 'connectionPulse 1s ease-out';
+    line.style.zIndex = '20';
+    
+    return line;
+}
+
+function highlightTopMatches(space3D) {
+    const candidatePoints = space3D.querySelectorAll('.candidate-point');
+    const queryPoint = space3D.querySelector('.query-point');
+    
+    if (!queryPoint) return;
+    
+    const queryPos = {
+        x: parseInt(queryPoint.style.left),
+        y: parseInt(queryPoint.style.top),
+        z: 0
+    };
+    
+    // Calculate distances and sort
+    const pointsWithDistance = Array.from(candidatePoints).map(point => {
+        const pointPos = {
+            x: parseInt(point.style.left),
+            y: parseInt(point.style.top),
+            z: parseFloat(point.style.transform.match(/translateZ\(([^)]+)px\)/)?.[1] || 0)
+        };
+        
+        const distance = Math.sqrt(
+            Math.pow(queryPos.x - pointPos.x, 2) + 
+            Math.pow(queryPos.y - pointPos.y, 2) + 
+            Math.pow(queryPos.z - pointPos.z, 2)
+        );
+        
+        return { point, distance };
+    }).sort((a, b) => a.distance - b.distance);
+    
+    // Highlight top 3 matches
+    const colors = [
+        { bg: 'radial-gradient(circle, #00ff88 0%, #00d4ff 100%)', shadow: '0 0 25px #00ff88' },
+        { bg: 'radial-gradient(circle, #ffd700 0%, #ffb347 100%)', shadow: '0 0 20px #ffd700' },
+        { bg: 'radial-gradient(circle, #ff6b6b 0%, #ee5a24 100%)', shadow: '0 0 15px #ff6b6b' }
+    ];
+    
+    pointsWithDistance.slice(0, 3).forEach(({ point }, index) => {
+        setTimeout(() => {
+            point.style.background = colors[index].bg;
+            point.style.boxShadow = colors[index].shadow;
+            point.style.transform = point.style.transform.replace(/scale\([^)]*\)/, 'scale(2)');
+            point.style.animation = 'bounce 0.8s ease-in-out';
+        }, index * 300);
+    });
 }
 
 function createQueryVector() {
