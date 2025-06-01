@@ -375,19 +375,38 @@ function generateCandidateNodes() {
     space3D.style.transform = 'rotateX(15deg) rotateY(0deg)';
     visualization.appendChild(space3D);
     
-    // Add status display
+    // Add status display (outside 3D space)
     const status = document.createElement('div');
     status.id = 'searchStatus';
     status.className = 'search-status';
     status.textContent = 'Cargando espacio vectorial...';
-    space3D.appendChild(status);
+    status.style.position = 'absolute';
+    status.style.top = '50%';
+    status.style.left = '50%';
+    status.style.transform = 'translate(-50%, -50%)';
+    status.style.color = '#00d4ff';
+    status.style.fontFamily = "'Courier New', monospace";
+    status.style.fontSize = '16px';
+    status.style.textAlign = 'center';
+    status.style.zIndex = '100';
+    status.style.textShadow = '0 0 10px #00d4ff';
+    status.style.pointerEvents = 'none';
+    visualization.appendChild(status);
     
-    // Add vector count display
+    // Add vector count display (outside 3D space)
     const vectorCount = document.createElement('div');
     vectorCount.id = 'vectorCount';
     vectorCount.className = 'vector-count';
     vectorCount.textContent = '0';
-    space3D.appendChild(vectorCount);
+    vectorCount.style.position = 'absolute';
+    vectorCount.style.top = '15px';
+    vectorCount.style.right = '15px';
+    vectorCount.style.color = '#888';
+    vectorCount.style.fontFamily = "'Courier New', monospace";
+    vectorCount.style.fontSize = '14px';
+    vectorCount.style.zIndex = '100';
+    vectorCount.style.pointerEvents = 'none';
+    visualization.appendChild(vectorCount);
     
     // Get real embeddings from candidates
     fetch('/api/candidates-vectors-detailed')
@@ -549,27 +568,29 @@ function addRotationControls(space3D) {
     
     const visualization = document.getElementById('vectorVisualization');
     
-    // Auto-rotation
+    // Very slow auto-rotation
     const autoRotate = setInterval(() => {
         if (!isRotating) {
-            rotationY += 0.5;
+            rotationY += 0.1; // Much slower rotation
             space3D.style.transform = `rotateX(${rotationX}deg) rotateY(${rotationY}deg)`;
         }
-    }, 100);
+    }, 200); // Less frequent updates
     
     // Manual rotation with mouse
     visualization.addEventListener('mousedown', (e) => {
         isRotating = true;
         const startX = e.clientX;
         const startY = e.clientY;
+        const startRotationX = rotationX;
+        const startRotationY = rotationY;
         
         const handleMouseMove = (e) => {
-            const deltaX = e.clientX - startX;
-            const deltaY = e.clientY - startY;
+            const deltaX = (e.clientX - startX) * 0.2; // Reduced sensitivity
+            const deltaY = (e.clientY - startY) * 0.2;
             
-            rotationY += deltaX * 0.5;
-            rotationX -= deltaY * 0.5;
-            rotationX = Math.max(-60, Math.min(60, rotationX));
+            rotationY = startRotationY + deltaX;
+            rotationX = startRotationX - deltaY;
+            rotationX = Math.max(-30, Math.min(60, rotationX)); // Limit vertical rotation
             
             space3D.style.transform = `rotateX(${rotationX}deg) rotateY(${rotationY}deg)`;
         };
@@ -582,6 +603,15 @@ function addRotationControls(space3D) {
         
         document.addEventListener('mousemove', handleMouseMove);
         document.addEventListener('mouseup', handleMouseUp);
+    });
+    
+    // Add visual feedback for interactivity
+    visualization.style.cursor = 'grab';
+    visualization.addEventListener('mousedown', () => {
+        visualization.style.cursor = 'grabbing';
+    });
+    document.addEventListener('mouseup', () => {
+        visualization.style.cursor = 'grab';
     });
 }
 
