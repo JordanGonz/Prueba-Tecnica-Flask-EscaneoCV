@@ -11,8 +11,9 @@
     border-radius: 15px;
     position: relative;
     overflow: hidden;
-    display: none;
+    display: block;
     border: 2px solid #333;
+    margin-top: 1rem;
 }
 
 .search-particle {
@@ -315,6 +316,9 @@ function initializeVisualization() {
     const visualization = document.getElementById('vectorVisualization');
     const status = document.getElementById('searchStatus');
     
+    // Show visualization immediately
+    visualization.style.display = 'block';
+    
     // Load candidates data
     fetch('/api/candidates-vectors')
         .then(response => response.json())
@@ -323,16 +327,17 @@ function initializeVisualization() {
             document.getElementById('vectorCount').textContent = candidates.length;
             
             if (candidates.length > 0) {
-                visualization.style.display = 'block';
                 status.textContent = `Espacio vectorial listo - ${candidates.length} candidatos`;
                 generateCandidateNodes();
             } else {
-                status.textContent = 'No hay candidatos con embeddings disponibles';
+                visualization.style.display = 'block';
+                status.textContent = 'Subiendo CVs para generar vectores...';
             }
         })
         .catch(error => {
             console.error('Error loading candidates:', error);
-            status.textContent = 'Error cargando datos de candidatos';
+            visualization.style.display = 'block';
+            status.textContent = 'Inicializando espacio vectorial...';
         });
 }
 
@@ -384,7 +389,7 @@ function performSemanticSearch(query) {
         node.classList.remove('matched');
     });
     
-    // Animate search process
+    // Start animations immediately
     animateVectorSearch(query);
     
     // Perform actual search
@@ -397,22 +402,28 @@ function performSemanticSearch(query) {
     })
     .then(response => response.json())
     .then(data => {
+        console.log('Search results:', data);
         setTimeout(() => {
-            displaySearchResults(data.results);
-            highlightMatchedCandidates(data.results);
+            if (data.results && data.results.length > 0) {
+                displaySearchResults(data.results);
+                highlightMatchedCandidates(data.results);
+                status.textContent = `Búsqueda completada - ${data.results.length} coincidencias encontradas`;
+            } else {
+                status.textContent = 'No se encontraron coincidencias';
+                displaySearchResults([]);
+            }
             
             isSearching = false;
             searchBtn.innerHTML = '<i class="fas fa-rocket me-2"></i>Buscar';
             searchBtn.disabled = false;
-            status.textContent = `Búsqueda completada - ${data.results.length} coincidencias encontradas`;
-        }, 2000);
+        }, 3000);
     })
     .catch(error => {
         console.error('Search error:', error);
         isSearching = false;
         searchBtn.innerHTML = '<i class="fas fa-rocket me-2"></i>Buscar';
         searchBtn.disabled = false;
-        status.textContent = 'Error en la búsqueda';
+        status.textContent = 'Error en la búsqueda: ' + error.message;
     });
 }
 
