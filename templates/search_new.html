@@ -133,6 +133,19 @@
     }
 }
 
+@keyframes expandRipple {
+    from {
+        width: 20px;
+        height: 20px;
+        opacity: 0.8;
+    }
+    to {
+        width: 400px;
+        height: 400px;
+        opacity: 0;
+    }
+}
+
 .search-status {
     position: absolute;
     top: 50%;
@@ -361,52 +374,21 @@ function initializeVisualization() {
 
 function generateCandidateNodes() {
     const visualization = document.getElementById('vectorVisualization');
+    const status = document.getElementById('searchStatus');
+    const vectorCount = document.getElementById('vectorCount');
     
     // Clear existing content
     visualization.innerHTML = '';
     
-    // Create 3D space container
-    const space3D = document.createElement('div');
-    space3D.className = 'vector-space-3d';
-    space3D.style.position = 'absolute';
-    space3D.style.width = '100%';
-    space3D.style.height = '100%';
-    space3D.style.transformStyle = 'preserve-3d';
-    space3D.style.transform = 'rotateX(15deg) rotateY(0deg)';
-    visualization.appendChild(space3D);
-    
-    // Add status display (outside 3D space)
-    const status = document.createElement('div');
-    status.id = 'searchStatus';
-    status.className = 'search-status';
-    status.textContent = 'Cargando espacio vectorial...';
-    status.style.position = 'absolute';
-    status.style.top = '50%';
-    status.style.left = '50%';
-    status.style.transform = 'translate(-50%, -50%)';
-    status.style.color = '#00d4ff';
-    status.style.fontFamily = "'Courier New', monospace";
-    status.style.fontSize = '16px';
-    status.style.textAlign = 'center';
-    status.style.zIndex = '100';
-    status.style.textShadow = '0 0 10px #00d4ff';
-    status.style.pointerEvents = 'none';
-    visualization.appendChild(status);
-    
-    // Add vector count display (outside 3D space)
-    const vectorCount = document.createElement('div');
-    vectorCount.id = 'vectorCount';
-    vectorCount.className = 'vector-count';
-    vectorCount.textContent = '0';
-    vectorCount.style.position = 'absolute';
-    vectorCount.style.top = '15px';
-    vectorCount.style.right = '15px';
-    vectorCount.style.color = '#888';
-    vectorCount.style.fontFamily = "'Courier New', monospace";
-    vectorCount.style.fontSize = '14px';
-    vectorCount.style.zIndex = '100';
-    vectorCount.style.pointerEvents = 'none';
-    visualization.appendChild(vectorCount);
+    // Create simple scatter plot container
+    const scatterPlot = document.createElement('div');
+    scatterPlot.className = 'scatter-plot-3d';
+    scatterPlot.style.position = 'relative';
+    scatterPlot.style.width = '100%';
+    scatterPlot.style.height = '100%';
+    scatterPlot.style.background = 'radial-gradient(circle at center, #1a1a2e 0%, #0f0f1a 100%)';
+    scatterPlot.style.overflow = 'hidden';
+    visualization.appendChild(scatterPlot);
     
     // Get real embeddings from candidates
     fetch('/api/candidates-vectors-detailed')
@@ -421,32 +403,145 @@ function generateCandidateNodes() {
             if (candidatesWithEmbeddings.length > 0) {
                 status.textContent = `Espacio vectorial listo - ${candidatesWithEmbeddings.length} candidatos`;
                 
-                // Generate candidate points with PCA-like distribution
+                // Create scatter points for candidates
                 candidatesWithEmbeddings.forEach((candidate, index) => {
-                    createCandidatePoint(space3D, candidate, index, candidatesWithEmbeddings.length);
+                    createScatterPoint(scatterPlot, candidate, index, candidatesWithEmbeddings.length);
                 });
                 
-                // Generate additional ambient points for density (more points for better visualization)
-                const ambientCount = Math.max(100, candidatesWithEmbeddings.length * 20);
-                generateAmbientPoints(space3D, ambientCount);
+                // Add background ambient points for context
+                createAmbientScatterPoints(scatterPlot, 80);
             } else {
                 status.textContent = 'No hay candidatos con embeddings. Sube algunos CVs primero.';
-                // Still generate some ambient points for demonstration
-                generateAmbientPoints(space3D, 150);
+                // Still create demo points
+                createAmbientScatterPoints(scatterPlot, 50);
             }
-            
-            // Add 3D rotation controls
-            addRotationControls(space3D);
             
             candidates = candidatesWithEmbeddings;
         })
         .catch(error => {
             console.error('Error loading detailed candidates:', error);
-            status.textContent = 'Error cargando candidatos. Generando visualización demo...';
-            // Generate demo ambient points
-            generateAmbientPoints(space3D, 200);
-            addRotationControls(space3D);
+            status.textContent = 'Error cargando candidatos. Mostrando visualización demo...';
+            createAmbientScatterPoints(scatterPlot, 60);
         });
+}
+
+function createScatterPoint(container, candidate, index, total) {
+    const point = document.createElement('div');
+    point.className = 'scatter-point candidate-point';
+    
+    // Position based on embedding data or distributed layout
+    let x, y;
+    if (candidate.embedding && candidate.embedding.length >= 2) {
+        // Map first two embedding dimensions to 2D space
+        x = mapValue(candidate.embedding[0], 50, container.offsetWidth - 50);
+        y = mapValue(candidate.embedding[1], 50, container.offsetHeight - 50);
+    } else {
+        // Fallback: distribute in clusters
+        const clusterIndex = index % 3;
+        const clusters = [
+            {cx: 150, cy: 150},
+            {cx: 350, cy: 200},
+            {cx: 250, cy: 350}
+        ];
+        const cluster = clusters[clusterIndex];
+        x = cluster.cx + (Math.random() - 0.5) * 100;
+        y = cluster.cy + (Math.random() - 0.5) * 100;
+    }
+    
+    // Style the point
+    point.style.position = 'absolute';
+    point.style.left = x + 'px';
+    point.style.top = y + 'px';
+    point.style.width = '8px';
+    point.style.height = '8px';
+    point.style.borderRadius = '50%';
+    point.style.background = 'radial-gradient(circle, #4a9eff 0%, #2d5aa0 100%)';
+    point.style.boxShadow = '0 0 10px rgba(74, 158, 255, 0.6)';
+    point.style.cursor = 'pointer';
+    point.style.transition = 'all 0.3s ease';
+    point.style.zIndex = '10';
+    
+    // Store candidate data
+    point.setAttribute('data-candidate-id', candidate.id);
+    point.setAttribute('data-candidate-name', candidate.name);
+    point.setAttribute('data-original-pos', JSON.stringify({x, y}));
+    
+    // Hover effects
+    point.addEventListener('mouseenter', () => {
+        point.style.transform = 'scale(2)';
+        point.style.background = 'radial-gradient(circle, #ff6b6b 0%, #ee5a24 100%)';
+        point.style.boxShadow = '0 0 15px rgba(255, 107, 107, 0.8)';
+        showTooltip(point, candidate);
+    });
+    
+    point.addEventListener('mouseleave', () => {
+        point.style.transform = 'scale(1)';
+        point.style.background = 'radial-gradient(circle, #4a9eff 0%, #2d5aa0 100%)';
+        point.style.boxShadow = '0 0 10px rgba(74, 158, 255, 0.6)';
+        hideTooltip();
+    });
+    
+    point.addEventListener('click', () => {
+        window.open(`/candidate/${candidate.id}`, '_blank');
+    });
+    
+    container.appendChild(point);
+}
+
+function createAmbientScatterPoints(container, count) {
+    for (let i = 0; i < count; i++) {
+        const point = document.createElement('div');
+        point.className = 'scatter-point ambient-point';
+        
+        const x = Math.random() * (container.offsetWidth || 600);
+        const y = Math.random() * (container.offsetHeight || 500);
+        
+        point.style.position = 'absolute';
+        point.style.left = x + 'px';
+        point.style.top = y + 'px';
+        point.style.width = '3px';
+        point.style.height = '3px';
+        point.style.borderRadius = '50%';
+        point.style.background = `rgba(100, 150, 255, ${0.2 + Math.random() * 0.3})`;
+        point.style.pointerEvents = 'none';
+        
+        container.appendChild(point);
+    }
+}
+
+function mapValue(value, min, max) {
+    // Map embedding values (typically -1 to 1) to screen coordinates
+    const normalized = Math.tanh(value); // Ensure [-1, 1] range
+    return min + (normalized + 1) * (max - min) / 2;
+}
+
+function showTooltip(point, candidate) {
+    const tooltip = document.createElement('div');
+    tooltip.className = 'candidate-tooltip';
+    tooltip.innerHTML = `
+        <div style="font-weight: bold;">${candidate.name}</div>
+        <div style="font-size: 12px; color: #ccc;">${candidate.email || 'Sin email'}</div>
+    `;
+    tooltip.style.position = 'absolute';
+    tooltip.style.background = 'rgba(0, 0, 0, 0.9)';
+    tooltip.style.color = 'white';
+    tooltip.style.padding = '8px';
+    tooltip.style.borderRadius = '6px';
+    tooltip.style.fontSize = '12px';
+    tooltip.style.zIndex = '1000';
+    tooltip.style.pointerEvents = 'none';
+    tooltip.style.border = '1px solid #555';
+    tooltip.style.left = (parseInt(point.style.left) + 15) + 'px';
+    tooltip.style.top = (parseInt(point.style.top) - 15) + 'px';
+    
+    point.parentNode.appendChild(tooltip);
+}
+
+function hideTooltip() {
+    const tooltip = document.querySelector('.candidate-tooltip');
+    if (tooltip) {
+        tooltip.remove();
+    }
 }
 
 function createCandidatePoint(space3D, candidate, index, total) {
@@ -707,29 +802,123 @@ function performSemanticSearch(query) {
 }
 
 function animateVectorSearch(query) {
-    const visualization = document.getElementById('vectorVisualization');
+    const scatterPlot = document.querySelector('.scatter-plot-3d');
     const status = document.getElementById('searchStatus');
-    const space3D = document.querySelector('.vector-space-3d');
     
-    console.log('Starting advanced vector search animation for:', query);
+    console.log('Starting scatter plot search animation for:', query);
     
-    if (!space3D) return;
+    if (!scatterPlot) return;
     
-    // Phase 1: Generate query embedding
+    // Reset all points to default state
+    const candidatePoints = scatterPlot.querySelectorAll('.candidate-point');
+    candidatePoints.forEach(point => {
+        point.style.background = 'radial-gradient(circle, #4a9eff 0%, #2d5aa0 100%)';
+        point.style.boxShadow = '0 0 10px rgba(74, 158, 255, 0.6)';
+        point.style.transform = 'scale(1)';
+    });
+    
+    // Phase 1: Show search process
     status.textContent = 'Generando embedding de consulta...';
-    const queryPoint = createQueryPoint(space3D);
     
-    // Phase 2: Calculate similarities with all candidates
+    // Phase 2: Animate similarity calculation
     setTimeout(() => {
         status.textContent = 'Calculando similitudes vectoriales...';
-        animateVectorSimilarityCalculation3D(space3D, queryPoint);
+        animateScatterSimilarity(scatterPlot);
     }, 500);
     
-    // Phase 3: Highlight matches
+    // Phase 3: Highlight matches when results arrive
     setTimeout(() => {
         status.textContent = 'Identificando mejores coincidencias...';
-        highlightTopMatches(space3D);
-    }, 1500);
+    }, 1000);
+}
+
+function animateScatterSimilarity(scatterPlot) {
+    const candidatePoints = scatterPlot.querySelectorAll('.candidate-point');
+    
+    // Create ripple effect from center
+    const ripple = document.createElement('div');
+    ripple.style.position = 'absolute';
+    ripple.style.left = '50%';
+    ripple.style.top = '50%';
+    ripple.style.width = '20px';
+    ripple.style.height = '20px';
+    ripple.style.borderRadius = '50%';
+    ripple.style.background = 'radial-gradient(circle, rgba(255, 71, 87, 0.6) 0%, transparent 70%)';
+    ripple.style.transform = 'translate(-50%, -50%)';
+    ripple.style.animation = 'expandRipple 2s ease-out forwards';
+    ripple.style.pointerEvents = 'none';
+    ripple.style.zIndex = '5';
+    
+    scatterPlot.appendChild(ripple);
+    
+    // Animate each point with a wave effect
+    candidatePoints.forEach((point, index) => {
+        setTimeout(() => {
+            // Pulse effect
+            point.style.transform = 'scale(1.3)';
+            point.style.background = 'radial-gradient(circle, #ffb347 0%, #ff6b6b 100%)';
+            point.style.boxShadow = '0 0 15px rgba(255, 179, 71, 0.8)';
+            
+            // Return to normal
+            setTimeout(() => {
+                point.style.transform = 'scale(1)';
+                point.style.background = 'radial-gradient(circle, #4a9eff 0%, #2d5aa0 100%)';
+                point.style.boxShadow = '0 0 10px rgba(74, 158, 255, 0.6)';
+            }, 300);
+            
+        }, index * 100);
+    });
+    
+    // Remove ripple after animation
+    setTimeout(() => {
+        if (ripple.parentNode) {
+            ripple.parentNode.removeChild(ripple);
+        }
+    }, 2000);
+}
+
+function highlightMatchedCandidates(results) {
+    const scatterPlot = document.querySelector('.scatter-plot-3d');
+    if (!scatterPlot) return;
+    
+    // Highlight matched candidates based on search results
+    results.forEach((result, index) => {
+        const candidatePoint = scatterPlot.querySelector(`[data-candidate-id="${result.id}"]`);
+        if (candidatePoint) {
+            setTimeout(() => {
+                const colors = [
+                    { bg: 'radial-gradient(circle, #00ff88 0%, #00d4ff 100%)', shadow: '0 0 20px #00ff88' },
+                    { bg: 'radial-gradient(circle, #ffd700 0%, #ffb347 100%)', shadow: '0 0 18px #ffd700' },
+                    { bg: 'radial-gradient(circle, #ff6b6b 0%, #ee5a24 100%)', shadow: '0 0 15px #ff6b6b' }
+                ];
+                
+                const colorIndex = Math.min(index, colors.length - 1);
+                candidatePoint.style.background = colors[colorIndex].bg;
+                candidatePoint.style.boxShadow = colors[colorIndex].shadow;
+                candidatePoint.style.transform = 'scale(1.5)';
+                candidatePoint.style.animation = 'bounce 0.6s ease-in-out';
+                
+                // Add similarity label
+                const similarityLabel = document.createElement('div');
+                similarityLabel.className = 'similarity-label';
+                similarityLabel.textContent = `${(result.similarity * 100).toFixed(1)}%`;
+                similarityLabel.style.position = 'absolute';
+                similarityLabel.style.left = (parseInt(candidatePoint.style.left) + 15) + 'px';
+                similarityLabel.style.top = (parseInt(candidatePoint.style.top) - 10) + 'px';
+                similarityLabel.style.color = '#ffffff';
+                similarityLabel.style.fontSize = '11px';
+                similarityLabel.style.fontWeight = 'bold';
+                similarityLabel.style.background = 'rgba(0, 0, 0, 0.8)';
+                similarityLabel.style.padding = '2px 4px';
+                similarityLabel.style.borderRadius = '3px';
+                similarityLabel.style.zIndex = '15';
+                similarityLabel.style.pointerEvents = 'none';
+                
+                scatterPlot.appendChild(similarityLabel);
+                
+            }, index * 200);
+        }
+    });
 }
 
 function createQueryPoint(space3D) {
