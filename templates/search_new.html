@@ -327,6 +327,32 @@
 {% endblock %}
 
 {% block extra_scripts %}
+<style>
+@keyframes highlightPulse {
+    0%, 100% { 
+        filter: brightness(1);
+    }
+    50% { 
+        filter: brightness(1.4);
+    }
+}
+
+@keyframes fadeInBounce {
+    0% {
+        opacity: 0;
+        transform: translateX(-50%) scale(0.5) translateY(10px);
+    }
+    80% {
+        opacity: 1;
+        transform: translateX(-50%) scale(1.1) translateY(-5px);
+    }
+    100% {
+        opacity: 1;
+        transform: translateX(-50%) scale(1) translateY(0);
+    }
+}
+</style>
+
 <script>
 let candidates = [];
 let isSearching = false;
@@ -1286,15 +1312,95 @@ function createQueryParticle() {
 }
 
 function highlightMatchedCandidates(results) {
-    results.forEach(result => {
-        const node = document.querySelector(`[data-candidate-id="${result.id}"]`);
-        if (node) {
-            node.classList.add('matched');
-            
-            // Create connection line
-            const line = createConnectionLine(node);
-            document.getElementById('vectorVisualization').appendChild(line);
+    console.log('Starting highlighting animation for results:', results);
+    
+    const scatterPlot = document.querySelector('.scatter-plot-3d');
+    if (!scatterPlot) {
+        console.log('No scatter plot found');
+        return;
+    }
+    
+    const candidatePoints = scatterPlot.querySelectorAll('.candidate-point');
+    console.log('Found candidate points:', candidatePoints.length);
+    
+    // Reset all points first
+    candidatePoints.forEach(point => {
+        point.style.background = 'radial-gradient(circle, #4a9eff 0%, #2d5aa0 100%)';
+        point.style.boxShadow = '0 0 10px rgba(74, 158, 255, 0.6)';
+        point.style.transform = 'scale(1)';
+        point.style.animation = '';
+        
+        // Remove existing similarity labels
+        const existingLabel = point.querySelector('.similarity-label');
+        if (existingLabel) {
+            existingLabel.remove();
         }
+    });
+    
+    // Highlight matched candidates with animations
+    results.forEach((result, index) => {
+        setTimeout(() => {
+            candidatePoints.forEach(point => {
+                try {
+                    const candidateData = JSON.parse(point.dataset.candidate || '{}');
+                    if (candidateData.id === result.id) {
+                        const similarity = result.similarity;
+                        console.log(`Highlighting candidate ${result.name} (ID: ${result.id}) with similarity ${similarity}`);
+                        
+                        // Calculate color based on similarity - like TensorFlow Projector
+                        let color, glowColor;
+                        if (similarity > 0.4) {
+                            color = '#00ff88'; // Bright green for high similarity
+                            glowColor = 'rgba(0, 255, 136, 0.9)';
+                        } else if (similarity > 0.25) {
+                            color = '#ffcc00'; // Yellow for medium similarity
+                            glowColor = 'rgba(255, 204, 0, 0.9)';
+                        } else {
+                            color = '#ff4757'; // Red for low similarity
+                            glowColor = 'rgba(255, 71, 87, 0.9)';
+                        }
+                        
+                        // Animate the point dramatically
+                        point.style.transition = 'all 0.8s cubic-bezier(0.175, 0.885, 0.32, 1.275)';
+                        point.style.background = `radial-gradient(circle, ${color} 0%, ${color}66 100%)`;
+                        point.style.boxShadow = `
+                            0 0 20px ${glowColor}, 
+                            0 0 40px ${glowColor}, 
+                            0 0 60px ${glowColor}
+                        `;
+                        point.style.transform = `scale(${2 + similarity * 1.5})`;
+                        point.style.zIndex = '1000';
+                        
+                        // Add similarity percentage label
+                        const label = document.createElement('div');
+                        label.className = 'similarity-label';
+                        label.textContent = `${Math.round(similarity * 100)}%`;
+                        label.style.cssText = `
+                            position: absolute;
+                            top: -35px;
+                            left: 50%;
+                            transform: translateX(-50%);
+                            color: ${color};
+                            font-size: 16px;
+                            font-weight: bold;
+                            text-shadow: 0 0 8px rgba(0,0,0,0.8);
+                            background: rgba(0,0,0,0.7);
+                            padding: 4px 8px;
+                            border-radius: 6px;
+                            border: 2px solid ${color};
+                            z-index: 1001;
+                            animation: fadeInBounce 0.6s ease-out;
+                        `;
+                        point.appendChild(label);
+                        
+                        // Add continuous pulsing animation
+                        point.style.animation = 'highlightPulse 1.5s ease-in-out infinite';
+                    }
+                } catch (e) {
+                    console.error('Error highlighting candidate:', e);
+                }
+            });
+        }, index * 400); // Stagger the highlighting more dramatically
     });
 }
 
