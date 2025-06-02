@@ -62,21 +62,22 @@
                     
                     <!-- File Information -->
                     <div class="file-info d-none mb-4" id="fileInfo">
-                        <div class="card bg-light">
+                        <div class="card" style="background: rgba(21, 15, 65, 0.7); border: 1px solid var(--accent-blue);">
                             <div class="card-body py-3">
                                 <div class="row align-items-center">
                                     <div class="col-auto">
-                                        <i class="fas fa-file-alt fa-2x text-primary"></i>
+                                        <i class="fas fa-file-alt fa-2x" style="color: var(--accent-blue);"></i>
                                     </div>
                                     <div class="col">
-                                        <h6 class="mb-1" id="fileName"></h6>
-                                        <small class="text-muted">
+                                        <h6 class="mb-1 text-white" id="fileName"></h6>
+                                        <small style="color: rgba(255, 255, 255, 0.8);">
                                             <span id="fileSize"></span> • 
                                             <span id="fileType"></span>
                                         </small>
                                     </div>
                                     <div class="col-auto">
-                                        <button type="button" class="btn btn-sm btn-outline-danger" onclick="clearFile()">
+                                        <button type="button" class="btn btn-sm btn-outline-danger" onclick="clearFile()" 
+                                                style="color: var(--primary-color); border-color: var(--primary-color);">
                                             <i class="fas fa-times"></i>
                                         </button>
                                     </div>
