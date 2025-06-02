@@ -1,6 +1,6 @@
 {% extends "base.html" %}
 
-{% block title %}Panel Principal - Sistema de Reclutamiento IA{% endblock %}
+{% block title %}Dashboard - AI Recruitment System{% endblock %}
 
 {% block content %}
 <div class="row">
@@ -8,14 +8,14 @@
         <div class="d-flex justify-content-between align-items-center mb-4">
             <h1 class="display-6">
                 <i class="fas fa-tachometer-alt me-3"></i>
-                Panel Principal
+                Dashboard
             </h1>
             <div>
                 <a href="{{ url_for('upload_cv') }}" class="btn btn-primary me-2">
-                    <i class="fas fa-upload me-2"></i>Subir CV
+                    <i class="fas fa-upload me-2"></i>Upload CV
                 </a>
                 <a href="{{ url_for('search') }}" class="btn btn-outline-secondary">
-                    <i class="fas fa-search me-2"></i>Buscar Candidatos
+                    <i class="fas fa-search me-2"></i>Search Candidates
                 </a>
             </div>
         </div>
@@ -30,7 +30,7 @@
                 <div class="d-flex justify-content-between align-items-center">
                     <div>
                         <h3 class="card-title h2 mb-0">{{ total_candidates }}</h3>
-                        <p class="card-text">Total de Candidatos</p>
+                        <p class="card-text">Total Candidates</p>
                     </div>
                     <div class="fs-1">
                         <i class="fas fa-users"></i>
@@ -46,7 +46,7 @@
                 <div class="d-flex justify-content-between align-items-center">
                     <div>
                         <h3 class="card-title h2 mb-0">{{ recent_candidates|length }}</h3>
-                        <p class="card-text">Subidas Recientes</p>
+                        <p class="card-text">Recent Uploads</p>
                     </div>
                     <div class="fs-1">
                         <i class="fas fa-file-upload"></i>
@@ -62,7 +62,7 @@
                 <div class="d-flex justify-content-between align-items-center">
                     <div>
                         <h3 class="card-title h2 mb-0">PDF, DOCX, TXT</h3>
-                        <p class="card-text">Formatos Soportados</p>
+                        <p class="card-text">Supported Formats</p>
                     </div>
                     <div class="fs-1">
                         <i class="fas fa-file-alt"></i>
@@ -80,10 +80,10 @@
             <div class="card-header d-flex justify-content-between align-items-center">
                 <h5 class="card-title mb-0">
                     <i class="fas fa-clock me-2"></i>
-                    Candidatos Recientes
+                    Recent Candidates
                 </h5>
                 <a href="{{ url_for('candidates') }}" class="btn btn-sm btn-outline-primary">
-                    Ver Todos <i class="fas fa-arrow-right ms-1"></i>
+                    View All <i class="fas fa-arrow-right ms-1"></i>
                 </a>
             </div>
             
@@ -93,11 +93,11 @@
                         <table class="table table-hover mb-0">
                             <thead class="table-dark">
                                 <tr>
-                                    <th>Nombre</th>
+                                    <th>Name</th>
                                     <th>Email</th>
-                                    <th>Tipo de Archivo</th>
-                                    <th>Fecha de Subida</th>
-                                    <th>Acciones</th>
+                                    <th>File Type</th>
+                                    <th>Upload Date</th>
+                                    <th>Actions</th>
                                 </tr>
                             </thead>
                             <tbody>
@@ -125,7 +125,7 @@
                                                     {{ candidate.email }}
                                                 </a>
                                             {% else %}
-                                                <span class="text-muted">Sin email</span>
+                                                <span class="text-muted">No email</span>
                                             {% endif %}
                                         </td>
                                         <td>
@@ -135,13 +135,13 @@
                                         </td>
                                         <td>
                                             <small class="text-muted">
-                                                {{ candidate.created_at.strftime('%Y-%m-%d %H:%M') if candidate.created_at else 'Desconocida' }}
+                                                {{ candidate.created_at.strftime('%Y-%m-%d %H:%M') if candidate.created_at else 'Unknown' }}
                                             </small>
                                         </td>
                                         <td>
                                             <a href="{{ url_for('view_candidate', candidate_id=candidate.id) }}" 
                                                class="btn btn-sm btn-outline-primary">
-                                                <i class="fas fa-eye me-1"></i>Ver
+                                                <i class="fas fa-eye me-1"></i>View
                                             </a>
                                         </td>
                                     </tr>
@@ -154,10 +154,10 @@
                 <div class="card-body text-center py-5">
                     <div class="text-muted">
                         <i class="fas fa-inbox fa-3x mb-3"></i>
-                        <h5>Aún no hay candidatos</h5>
-                        <p>Comienza subiendo tu primer CV para ver candidatos aquí.</p>
+                        <h5>No candidates yet</h5>
+                        <p>Start by uploading your first CV to see candidates here.</p>
                         <a href="{{ url_for('upload_cv') }}" class="btn btn-primary">
-                            <i class="fas fa-upload me-2"></i>Subir Primer CV
+                            <i class="fas fa-upload me-2"></i>Upload First CV
                         </a>
                     </div>
                 </div>
@@ -173,7 +173,7 @@
             <div class="card-header">
                 <h5 class="card-title mb-0">
                     <i class="fas fa-bolt me-2"></i>
-                    Acciones Rápidas
+                    Quick Actions
                 </h5>
             </div>
             <div class="card-body">
@@ -182,8 +182,8 @@
                         <a href="{{ url_for('upload_cv') }}" class="text-decoration-none">
                             <div class="p-3 border rounded hover-effect">
                                 <i class="fas fa-file-upload fa-2x text-primary mb-2"></i>
-                                <h6>Subir CV</h6>
-                                <small class="text-muted">Agregar nuevo candidato</small>
+                                <h6>Upload CV</h6>
+                                <small class="text-muted">Add new candidate</small>
                             </div>
                         </a>
                     </div>
@@ -192,8 +192,8 @@
                         <a href="{{ url_for('search') }}" class="text-decoration-none">
                             <div class="p-3 border rounded hover-effect">
                                 <i class="fas fa-search fa-2x text-success mb-2"></i>
-                                <h6>Buscar</h6>
-                                <small class="text-muted">Encontrar candidatos</small>
+                                <h6>Search</h6>
+                                <small class="text-muted">Find candidates</small>
                             </div>
                         </a>
                     </div>
@@ -202,8 +202,8 @@
                         <a href="{{ url_for('candidates') }}" class="text-decoration-none">
                             <div class="p-3 border rounded hover-effect">
                                 <i class="fas fa-list fa-2x text-info mb-2"></i>
-                                <h6>Ver Todos</h6>
-                                <small class="text-muted">Ver todos los candidatos</small>
+                                <h6>Browse All</h6>
+                                <small class="text-muted">View all candidates</small>
                             </div>
                         </a>
                     </div>
@@ -212,8 +212,8 @@
                         <a href="{{ url_for('healthcheck') }}" class="text-decoration-none" target="_blank">
                             <div class="p-3 border rounded hover-effect">
                                 <i class="fas fa-heartbeat fa-2x text-warning mb-2"></i>
-                                <h6>Estado del Sistema</h6>
-                                <small class="text-muted">Verificar salud</small>
+                                <h6>System Status</h6>
+                                <small class="text-muted">Check health</small>
                             </div>
                         </a>
                     </div>

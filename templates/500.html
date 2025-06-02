@@ -1,23 +1,23 @@
 {% extends "base.html" %}
 
-{% block title %}Error del Servidor - Sistema de Reclutamiento IA{% endblock %}
+{% block title %}Server Error - AI Recruitment System{% endblock %}
 
 {% block content %}
 <div class="row justify-content-center">
     <div class="col-md-6">
         <div class="text-center">
             <div class="error-template">
-                <h1 class="display-1" style="color: var(--primary-color);">500</h1>
-                <h2 style="color: var(--secondary-white);">Error Interno del Servidor</h2>
-                <div class="error-details mb-4" style="color: rgba(255, 255, 255, 0.8);">
-                    Algo salió mal de nuestro lado. Estamos trabajando para solucionar este problema.
+                <h1 class="display-1 text-muted">500</h1>
+                <h2>Internal Server Error</h2>
+                <div class="error-details mb-4">
+                    Something went wrong on our end. We're working to fix this issue.
                 </div>
                 <div class="error-actions">
                     <a href="{{ url_for('index') }}" class="btn btn-primary btn-lg">
-                        <i class="fas fa-home me-2"></i>Ir al Inicio
+                        <i class="fas fa-home me-2"></i>Go Home
                     </a>
                     <a href="{{ url_for('upload_cv') }}" class="btn btn-outline-secondary btn-lg">
-                        <i class="fas fa-upload me-2"></i>Subir CV
+                        <i class="fas fa-upload me-2"></i>Upload CV
                     </a>
                 </div>
             </div>
