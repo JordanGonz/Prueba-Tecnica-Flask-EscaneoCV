@@ -65,7 +65,8 @@ def vector_similarity_search(query_embedding: List[float], limit: int = 10, min_
         query_vector = '[' + ','.join(map(str, query_embedding)) + ']'
         
         # Use pgvector's native cosine similarity with HNSW index
-        query = text("""
+        # Using string formatting to avoid SQLAlchemy parameter issues with vector types
+        query_sql = f"""
             SELECT 
                 c.id,
                 c.name,
@@ -77,17 +78,14 @@ def vector_similarity_search(query_embedding: List[float], limit: int = 10, min_
                 c.summary,
                 c.original_filename,
                 c.created_at,
-                1 - (c.embedding_vector <=> %(query_vector)s::vector(1536)) as similarity
+                1 - (c.embedding_vector <=> '{query_vector}'::vector(1536)) as similarity
             FROM candidate c
             WHERE c.embedding_vector IS NOT NULL
-            ORDER BY c.embedding_vector <=> %(query_vector)s::vector(1536)
-            LIMIT %(limit)s
-        """)
+            ORDER BY c.embedding_vector <=> '{query_vector}'::vector(1536)
+            LIMIT {limit}
+        """
         
-        result = db.session.execute(query, {
-            'query_vector': query_vector,
-            'limit': limit
-        })
+        result = db.session.execute(text(query_sql))
         
         candidates = []
         for row in result:
