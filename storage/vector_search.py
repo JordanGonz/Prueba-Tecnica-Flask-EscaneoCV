@@ -28,9 +28,9 @@ def store_embedding_vector(candidate_id: int, embedding: List[float]) -> bool:
         
         query = text("""
             UPDATE candidate 
-            SET embedding_vector = :embedding::vector(1536),
-                text_embedding = :embedding_json
-            WHERE id = :candidate_id
+            SET embedding_vector = %(embedding)s::vector(1536),
+                text_embedding = %(embedding_json)s
+            WHERE id = %(candidate_id)s
         """)
         
         db.session.execute(query, {
@@ -77,11 +77,11 @@ def vector_similarity_search(query_embedding: List[float], limit: int = 10, min_
                 c.summary,
                 c.original_filename,
                 c.created_at,
-                1 - (c.embedding_vector <=> :query_vector::vector(1536)) as similarity
+                1 - (c.embedding_vector <=> %(query_vector)s::vector(1536)) as similarity
             FROM candidate c
             WHERE c.embedding_vector IS NOT NULL
-            ORDER BY c.embedding_vector <=> :query_vector::vector(1536)
-            LIMIT :limit
+            ORDER BY c.embedding_vector <=> %(query_vector)s::vector(1536)
+            LIMIT %(limit)s
         """)
         
         result = db.session.execute(query, {
