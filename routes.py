@@ -122,12 +122,6 @@ def upload_cv():
                 db.session.add(candidate)
                 db.session.commit()
                 
-                # Store embedding in vector database if available
-                if embedding:
-                    from storage.vector_search import store_embedding_vector
-                    store_embedding_vector(candidate.id, embedding)
-                    logger.info(f"Stored vector embedding for candidate {candidate.id}")
-                
                 # Clean up temporary file
                 os.remove(filepath)
                 
@@ -291,7 +285,7 @@ def api_candidates_vectors_detailed():
 
 @app.route('/api/semantic-search', methods=['POST'])
 def api_semantic_search():
-    """Perform high-performance semantic search using pgvector"""
+    """Perform semantic search using embeddings"""
     try:
         data = request.get_json()
         query = data.get('query', '').strip()
@@ -300,20 +294,52 @@ def api_semantic_search():
             return jsonify({'error': 'Query is required', 'results': []}), 400
         
         # Generate embedding for search query
-        from parsers.vision_parser import generate_text_embedding
-        from storage.vector_search import vector_similarity_search
+        from parsers.vision_parser import generate_text_embedding, search_candidates_semantic
         
         query_embedding = generate_text_embedding(query)
         
-        # Use pgvector for ultra-fast similarity search
-        results = vector_similarity_search(query_embedding, limit=10, min_similarity=0.1)
+        # Get all candidates with embeddings
+        candidates = Candidate.query.filter(Candidate.text_embedding.isnot(None)).all()
         
-        logger.info(f"Vector search for '{query}' returned {len(results)} results")
+        # Prepare candidates for semantic search
+        candidate_embeddings = []
+        for candidate in candidates:
+            if candidate.text_embedding:
+                try:
+                    embedding = json.loads(candidate.text_embedding)
+                    candidate_embeddings.append({
+                        'id': candidate.id,
+                        'name': candidate.name,
+                        'email': candidate.email,
+                        'phone': candidate.phone,
+                        'skills': candidate.skills,
+                        'embedding': embedding,
+                        'candidate': candidate
+                    })
+                except json.JSONDecodeError:
+                    continue
+        
+        # Perform semantic search
+        results = search_candidates_semantic(query, candidate_embeddings, top_k=10)
+        
+        # Format results
+        formatted_results = []
+        for result in results:
+            formatted_results.append({
+                'id': result['id'],
+                'name': result['name'],
+                'email': result['email'],
+                'phone': result['phone'],
+                'skills': result['skills'],
+                'similarity': result['similarity']
+            })
+        
+        logger.info(f"Semantic search for '{query}' returned {len(formatted_results)} results")
         
         return jsonify({
             'query': query,
-            'results': results,
-            'count': len(results)
+            'results': formatted_results,
+            'count': len(formatted_results)
         })
         
     except Exception as e:

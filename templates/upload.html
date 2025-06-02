@@ -1,6 +1,6 @@
 {% extends "base.html" %}
 
-{% block title %}Upload CV - AI Recruitment System{% endblock %}
+{% block title %}Subir CV - Sistema de Reclutamiento IA{% endblock %}
 
 {% block content %}
 <div class="row justify-content-center">
@@ -9,29 +9,29 @@
             <div class="card-header">
                 <h2 class="card-title mb-0">
                     <i class="fas fa-file-upload me-2"></i>
-                    Upload Candidate CV
+                    Subir CV de Candidato
                 </h2>
             </div>
             
             <div class="card-body">
                 <p class="text-muted mb-4">
-                    Upload candidate CVs in PDF, DOCX, or TXT format. Our system will automatically 
-                    extract and structure the candidate information for easy searching and management.
+                    Sube CVs de candidatos en formato PDF, DOCX o TXT. Nuestro sistema extraerá y 
+                    estructurará automáticamente la información del candidato para facilitar la búsqueda y gestión.
                 </p>
                 
                 <form method="POST" enctype="multipart/form-data" id="uploadForm">
                     <div class="mb-4">
                         <label for="cv_file" class="form-label fw-bold">
                             <i class="fas fa-paperclip me-2"></i>
-                            Select CV File
+                            Seleccionar Archivo CV
                         </label>
                         
                         <div class="upload-area border border-2 border-dashed rounded p-5 text-center mb-3" 
                              id="uploadArea">
                             <div class="upload-content">
                                 <i class="fas fa-cloud-upload-alt fa-3x text-muted mb-3"></i>
-                                <h5 class="text-muted">Drag and drop your CV file here</h5>
-                                <p class="text-muted mb-3">or click to browse files</p>
+                                <h5 class="text-muted">Arrastra y suelta tu archivo CV aquí</h5>
+                                <p class="text-muted mb-3">o haz clic para buscar archivos</p>
                                 
                                 <input type="file" 
                                        class="form-control" 
@@ -43,40 +43,41 @@
                                 
                                 <button type="button" class="btn btn-outline-primary" onclick="document.getElementById('cv_file').click()">
                                     <i class="fas fa-folder-open me-2"></i>
-                                    Browse Files
+                                    Buscar Archivos
                                 </button>
                             </div>
                             
                             <div class="upload-success d-none">
                                 <i class="fas fa-check-circle fa-3x text-success mb-3"></i>
-                                <h5 class="text-success">File selected successfully!</h5>
+                                <h5 class="text-success">¡Archivo seleccionado exitosamente!</h5>
                                 <p class="text-muted mb-0" id="selectedFileName"></p>
                             </div>
                         </div>
                         
                         <div class="form-text">
                             <i class="fas fa-info-circle me-1"></i>
-                            Supported formats: PDF, DOCX, TXT (Max size: 16MB)
+                            Formatos soportados: PDF, DOCX, TXT (Tamaño máximo: 16MB)
                         </div>
                     </div>
                     
                     <!-- File Information -->
                     <div class="file-info d-none mb-4" id="fileInfo">
-                        <div class="card bg-light">
+                        <div class="card" style="background: rgba(21, 15, 65, 0.7); border: 1px solid var(--accent-blue);">
                             <div class="card-body py-3">
                                 <div class="row align-items-center">
                                     <div class="col-auto">
-                                        <i class="fas fa-file-alt fa-2x text-primary"></i>
+                                        <i class="fas fa-file-alt fa-2x" style="color: var(--accent-blue);"></i>
                                     </div>
                                     <div class="col">
-                                        <h6 class="mb-1" id="fileName"></h6>
-                                        <small class="text-muted">
+                                        <h6 class="mb-1 text-white" id="fileName"></h6>
+                                        <small style="color: rgba(255, 255, 255, 0.8);">
                                             <span id="fileSize"></span> • 
                                             <span id="fileType"></span>
                                         </small>
                                     </div>
                                     <div class="col-auto">
-                                        <button type="button" class="btn btn-sm btn-outline-danger" onclick="clearFile()">
+                                        <button type="button" class="btn btn-sm btn-outline-danger" onclick="clearFile()" 
+                                                style="color: var(--primary-color); border-color: var(--primary-color);">
                                             <i class="fas fa-times"></i>
                                         </button>
                                     </div>
@@ -90,11 +91,11 @@
                         <button type="submit" class="btn btn-primary btn-lg" id="uploadBtn" disabled>
                             <span class="upload-text">
                                 <i class="fas fa-upload me-2"></i>
-                                Process CV
+                                Procesar CV
                             </span>
                             <span class="upload-loading d-none">
                                 <div class="spinner-border spinner-border-sm me-2"></div>
-                                Processing...
+                                Procesando...
                             </span>
                         </button>
                     </div>
@@ -104,24 +105,24 @@
                 <div class="mt-4">
                     <h6 class="fw-bold">
                         <i class="fas fa-cogs me-2"></i>
-                        What happens when you upload?
+                        ¿Qué sucede cuando subes un archivo?
                     </h6>
                     <ul class="list-unstyled mt-3">
                         <li class="mb-2">
                             <i class="fas fa-check text-success me-2"></i>
-                            Text extraction from CV file
+                            Extracción de texto del archivo CV
                         </li>
                         <li class="mb-2">
                             <i class="fas fa-check text-success me-2"></i>
-                            Automatic parsing of candidate information
+                            Análisis automático de información del candidato
                         </li>
                         <li class="mb-2">
                             <i class="fas fa-check text-success me-2"></i>
-                            Skills and experience identification
+                            Identificación de habilidades y experiencia
                         </li>
                         <li class="mb-2">
                             <i class="fas fa-check text-success me-2"></i>
-                            Searchable candidate profile creation
+                            Creación de perfil de candidato indexado
                         </li>
                     </ul>
                 </div>
@@ -133,16 +134,16 @@
             <div class="card-header">
                 <h5 class="card-title mb-0">
                     <i class="fas fa-history me-2"></i>
-                    Recent Uploads
+                    Subidas Recientes
                 </h5>
             </div>
             <div class="card-body">
                 <div class="text-center text-muted">
                     <i class="fas fa-clock fa-2x mb-3"></i>
-                    <p>Recent uploads will appear here after processing.</p>
+                    <p>Las subidas recientes aparecerán aquí después del procesamiento.</p>
                     <a href="{{ url_for('candidates') }}" class="btn btn-outline-primary btn-sm">
                         <i class="fas fa-users me-1"></i>
-                        View All Candidates
+                        Ver Todos los Candidatos
                     </a>
                 </div>
             </div>
