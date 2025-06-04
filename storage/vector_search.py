@@ -48,7 +48,7 @@ def store_embedding_vector(candidate_id: int, embedding: List[float]) -> bool:
         db.session.rollback()
         return False
 
-def vector_similarity_search(query_embedding: List[float], limit: int = 10, min_similarity: float = 0.1) -> List[Dict]:
+def vector_similarity_search(query_embedding: List[float], limit: int = 10, min_similarity: float = 0.0) -> List[Dict]:
     """
     Perform high-performance vector similarity search using pgvector.
     
