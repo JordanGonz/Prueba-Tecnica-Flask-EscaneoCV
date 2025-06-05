@@ -305,8 +305,8 @@ def api_semantic_search():
         
         query_embedding = generate_text_embedding(query)
         
-        # Use pgvector for ultra-fast similarity search with reasonable threshold
-        results = vector_similarity_search(query_embedding, limit=10, min_similarity=0.2)
+        # Use pgvector for ultra-fast similarity search with lower threshold for better recall
+        results = vector_similarity_search(query_embedding, limit=10, min_similarity=0.1)
         
         logger.info(f"Vector search for '{query}' returned {len(results)} results")
         
