@@ -220,36 +220,8 @@ function initializeUtilities() {
 function initializeSearchFeatures() {
     const searchInput = document.getElementById('search_query');
     if (searchInput) {
-        // Add search suggestions and history
-        let searchHistory = getSearchHistory();
-        
-        // Create suggestions dropdown
-        const suggestionsContainer = document.createElement('div');
-        suggestionsContainer.className = 'position-absolute w-100 bg-dark border rounded mt-1 d-none';
-        suggestionsContainer.style.zIndex = '1000';
-        searchInput.parentNode.appendChild(suggestionsContainer);
-        
-        searchInput.addEventListener('focus', function() {
-            showSearchSuggestions(suggestionsContainer, searchHistory);
-        });
-        
-        searchInput.addEventListener('blur', function() {
-            // Delay hiding to allow clicking on suggestions
-            setTimeout(function() {
-                suggestionsContainer.classList.add('d-none');
-            }, 200);
-        });
-        
-        // Save search query on form submit
-        const searchForm = searchInput.closest('form');
-        if (searchForm) {
-            searchForm.addEventListener('submit', function() {
-                const query = searchInput.value.trim();
-                if (query) {
-                    saveSearchHistory(query);
-                }
-            });
-        }
+        // Just focus on search input without suggestions
+        searchInput.focus();
     }
 }
 
@@ -292,34 +264,11 @@ function saveSearchHistory(query) {
  * Show search suggestions
  */
 function showSearchSuggestions(container, history) {
-    if (history.length === 0) {
+    // Search suggestions disabled
+    if (container) {
         container.classList.add('d-none');
-        return;
     }
-    
-    const suggestions = history.slice(0, 5).map(query => 
-        `<div class="p-2 border-bottom cursor-pointer suggestion-item" data-query="${escapeHtml(query)}">
-            <i class="fas fa-history me-2 text-muted"></i>
-            ${escapeHtml(query)}
-        </div>`
-    ).join('');
-    
-    container.innerHTML = suggestions;
-    container.classList.remove('d-none');
-    
-    // Add click handlers
-    const suggestionItems = container.querySelectorAll('.suggestion-item');
-    suggestionItems.forEach(function(item) {
-        item.addEventListener('click', function() {
-            const query = this.dataset.query;
-            const searchInput = document.getElementById('search_query');
-            if (searchInput) {
-                searchInput.value = query;
-                searchInput.focus();
-            }
-            container.classList.add('d-none');
-        });
-    });
+    return;
 }
 
 /**
