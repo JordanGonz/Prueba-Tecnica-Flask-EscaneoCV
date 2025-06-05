@@ -296,33 +296,7 @@
         </div>
     </div>
 
-    <!-- Quick Search Examples -->
-    <div class="row mt-4">
-        <div class="col-12">
-            <div class="card bg-dark border-secondary">
-                <div class="card-body">
-                    <h6 class="text-white mb-3">Ejemplos de Búsqueda Rápida:</h6>
-                    <div class="d-flex flex-wrap gap-2">
-                        <button type="button" class="btn btn-outline-primary btn-sm search-example" data-query="Python">
-                            Python
-                        </button>
-                        <button type="button" class="btn btn-outline-success btn-sm search-example" data-query="React desarrollador frontend">
-                            React Frontend
-                        </button>
-                        <button type="button" class="btn btn-outline-warning btn-sm search-example" data-query="machine learning inteligencia artificial">
-                            Machine Learning
-                        </button>
-                        <button type="button" class="btn btn-outline-info btn-sm search-example" data-query="senior developer 5 años experiencia">
-                            Senior Developer
-                        </button>
-                        <button type="button" class="btn btn-outline-light btn-sm search-example" data-query="full stack JavaScript">
-                            Full Stack JS
-                        </button>
-                    </div>
-                </div>
-            </div>
-        </div>
-    </div>
+
 </div>
 {% endblock %}
 
@@ -365,7 +339,6 @@ document.addEventListener('DOMContentLoaded', function() {
 function setupEventListeners() {
     const form = document.getElementById('semanticSearchForm');
     const searchInput = document.getElementById('search_query');
-    const searchExamples = document.querySelectorAll('.search-example');
     
     form.addEventListener('submit', function(e) {
         e.preventDefault();
@@ -373,14 +346,6 @@ function setupEventListeners() {
         if (query && !isSearching) {
             performSemanticSearch(query);
         }
-    });
-    
-    searchExamples.forEach(button => {
-        button.addEventListener('click', function() {
-            const query = this.getAttribute('data-query');
-            searchInput.value = query;
-            performSemanticSearch(query);
-        });
     });
     
     searchInput.focus();
