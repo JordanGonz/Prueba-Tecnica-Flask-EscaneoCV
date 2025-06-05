@@ -91,8 +91,8 @@ def vector_similarity_search(query_embedding: List[float], limit: int = 10, min_
         for row in result:
             similarity = float(row.similarity)
             
-            # Filter by minimum similarity threshold
-            if similarity >= min_similarity:
+            # Temporarily show all results for debugging
+            if True:  # similarity >= min_similarity:
                 candidates.append({
                     'id': row.id,
                     'name': row.name,
