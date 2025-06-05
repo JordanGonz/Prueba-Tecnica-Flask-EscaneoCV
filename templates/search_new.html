@@ -759,10 +759,15 @@ function performSemanticSearch(query) {
     searchBtn.disabled = true;
     visualization.style.display = 'block';
     
-    // Clear previous results
-    document.querySelectorAll('.candidate-node').forEach(node => {
-        node.classList.remove('matched');
-    });
+    // Clear previous results - check if elements exist
+    const candidateNodes = document.querySelectorAll('.candidate-node');
+    if (candidateNodes) {
+        candidateNodes.forEach(node => {
+            if (node && node.classList) {
+                node.classList.remove('matched');
+            }
+        });
+    }
     
     // Start animations immediately
     animateVectorSearch(query);

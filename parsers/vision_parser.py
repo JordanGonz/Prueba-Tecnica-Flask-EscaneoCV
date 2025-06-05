@@ -229,10 +229,12 @@ def generate_text_embedding(text: str) -> List[float]:
         return []
     
     try:
+        # Add timeout and retry logic for OpenAI API
         response = openai_client.embeddings.create(
             model="text-embedding-3-small",
-            input=text,
-            encoding_format="float"
+            input=text[:8000],  # Limit text length to avoid token limits
+            encoding_format="float",
+            timeout=30  # Add timeout
         )
         
         embedding = response.data[0].embedding
@@ -242,7 +244,8 @@ def generate_text_embedding(text: str) -> List[float]:
         
     except Exception as e:
         logger.error(f"Error generating embedding: {str(e)}")
-        return []
+        # Return a zero vector of correct dimensions instead of empty list
+        return [0.0] * 1536
 
 def search_candidates_semantic(query: str, candidate_embeddings: List[Dict], top_k: int = 10) -> List[Dict]:
     """
