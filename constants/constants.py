@@ -1,5 +1,5 @@
 UNIVERSITY_ALIASES = {
-    "espol": "Universidad Escuela Superior Politécnica del Litoral",
+    "espol": "Escuela Superior Politécnica del Litoral",
     "ups": "Universidad Politécnica Salesiana",
     "uce": "Universidad Central del Ecuador",
     "utpl": "Universidad Técnica Particular de Loja",
@@ -9,7 +9,9 @@ UNIVERSITY_ALIASES = {
     "uta": "Universidad Técnica de Ambato",
     "espoch": "Escuela Superior Politécnica de Chimborazo",
     "unl": "Universidad Nacional de Loja",
+    "istg": "Instituto Superior Tecnológico Guayaquil"
 }
+
 
 ROLE_ALIASES = {
     "desarrolladores": ["desarrollador", "developer", "programador", "ingeniero", "software"],

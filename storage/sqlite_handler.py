@@ -5,6 +5,7 @@ from extensions import db
 from models import Candidate
 import re
 import json
+import unicodedata
 from constants.constants import UNIVERSITY_ALIASES,ROLE_ALIASES
 
 logger = logging.getLogger(__name__)
@@ -25,6 +26,9 @@ def extract_keywords(text: str) -> List[str]:
 
     return expanded_words
 
+def normalize(text: str) -> str:
+    text = unicodedata.normalize("NFKD", text)
+    return "".join(c for c in text if not unicodedata.combining(c)).lower().strip()
 
 def is_university(institution: str) -> bool:
     """
@@ -42,7 +46,7 @@ def search_candidates(query: str) -> List[Candidate]:
 
         keywords = extract_keywords(query)
 
-        # Genera condiciones por campo (con OR interno por keyword)
+        # Filtros OR por campo
         education_filter = or_(*[Candidate.education.ilike(f"%{kw}%") for kw in keywords])
         skills_filter = or_(*[Candidate.skills.ilike(f"%{kw}%") for kw in keywords])
         fulltext_filter = or_(*[Candidate.full_text.ilike(f"%{kw}%") for kw in keywords])
@@ -57,14 +61,24 @@ def search_candidates(query: str) -> List[Candidate]:
             )
         ).order_by(Candidate.created_at.desc()).limit(50).all()
 
-        # Si se menciona "universidad", filtrar los que tienen universidades reales
-        if any(word in query.lower() for word in ["universidad", "universidades"]):
+        # Detectar si se mencionó alguna universidad o alias
+        mentioned_universities = [
+            normalize(UNIVERSITY_ALIASES[k])
+            for k in UNIVERSITY_ALIASES
+            if k.lower() in query.lower() or UNIVERSITY_ALIASES[k].lower() in query.lower()
+        ]
+
+        if mentioned_universities:
             filtered_candidates = []
             for c in candidates:
                 try:
                     education_data = json.loads(c.education) if isinstance(c.education, str) else c.education
-                    if any(is_university(ed.get("institution", "")) for ed in education_data if isinstance(ed, dict)):
-                        filtered_candidates.append(c)
+                    for ed in education_data:
+                        if isinstance(ed, dict):
+                            inst = normalize(ed.get("institution", ""))
+                            if any(alias in inst or inst in alias for alias in mentioned_universities):
+                                filtered_candidates.append(c)
+                                break
                 except Exception as parse_error:
                     logger.warning(f"Error parsing education JSON for candidate {c.id}: {parse_error}")
             candidates = filtered_candidates
