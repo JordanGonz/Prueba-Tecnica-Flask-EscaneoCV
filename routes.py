@@ -14,6 +14,7 @@ from sqlalchemy import or_
 from flask import request, jsonify
 from sentence_transformers import SentenceTransformer
 from sklearn.metrics.pairwise import cosine_similarity
+from storage.sqlite_handler import extract_keywords
 import numpy as np
 import pickle
 import traceback
@@ -255,23 +256,59 @@ def search_api():
     return render_template('search_new.html', candidates=candidates, search_query=search_query)
 
 
-@routes_bp.route('/api/candidates-vectors-detailed', methods=['GET'])
+@routes_bp.route('/api/candidates-vectors-detailed', methods=['GET', 'POST'])
 def candidates_vectors_detailed():
     try:
-        candidates = Candidate.query.all()
+        # Obtener query desde POST (JSON) o GET (query param)
+        if request.method == 'POST':
+            data = request.get_json(silent=True) or {}
+            query = data.get("query", "").strip()
+        else:
+            query = request.args.get("query", "").strip()
+
+        # Si hay query, usar search. Si no, traer todos los candidatos
+        if query:
+            matched_candidates = search_candidates(query)
+        else:
+            matched_candidates = get_all_candidates(limit=100)
+
+        # Estimar similitud (sólo si hay query), sino 0
+        for candidate in matched_candidates:
+            candidate.similarity = estimate_similarity(query, candidate) if query else 0.0
+
+        # Ordenar por similitud descendente
+        matched_candidates.sort(key=lambda c: c.similarity, reverse=True)
 
         return jsonify({
             "status": "success",
-            "candidates": [c.to_dict() for c in candidates]
+            "query": query,
+            "count": len(matched_candidates),
+            "candidates": [
+                candidate.to_dict() | {"similarity": round(candidate.similarity, 4)}
+                for candidate in matched_candidates
+            ]
         })
 
     except Exception as e:
-        logger.error(f"Error fetching detailed candidate vectors: {str(e)}")
+        logger.error(f"Error en vector match: {str(e)}")
         return jsonify({
             "status": "error",
-            "message": str(e)
+            "message": "Ocurrió un error interno al procesar la búsqueda.",
+            "details": str(e)
         }), 500
 
+
+# Dummy de similitud si no usas embeddings reales
+def estimate_similarity(query, candidate):
+    keywords = set(extract_keywords(query))
+    content = (candidate.full_text or "") + " ".join([
+        candidate.education or "",
+        candidate.experience or "",
+        candidate.skills or ""
+    ])
+    content = content.lower()
+    matches = sum(1 for kw in keywords if kw in content)
+    return matches / len(keywords) if keywords else 0
 
 
 @routes_bp.errorhandler(413)

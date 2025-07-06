@@ -131,48 +131,53 @@ function initializeVisualization() {
     // Show visualization immediately
     visualization.style.display = 'block';
     status.textContent = 'Inicializando espacio vectorial 3D...';
-    
-    // Always create the 3D space, even if no candidates yet
-    generateCandidateNodes();
 }
 
-function generateCandidateNodes() {
-    const status = document.getElementById('searchStatus');
+
+async function performSemanticSearch(query) {
+    isSearching = true;
+    const searchBtn = document.getElementById('searchBtn');
     const vectorCount = document.getElementById('vectorCount');
+    const status = document.getElementById('searchStatus');
     const resultsDiv = document.getElementById('candidateResultss');
-    const queryInput = document.getElementById('search_query');
-    const query = queryInput ? queryInput.value.trim() : "";
+    const containerClassic = document.getElementById('candidateResults');
 
-    // Enviar la query como parámetro GET
-    fetch(`/api/candidates-vectors-detailed?query=${encodeURIComponent(query)}`)
-        .then(response => response.json())
-        .then(data => {
-            const candidatesWithEmbeddings = data.candidates || [];
+    searchBtn.disabled = true;
+    searchBtn.innerHTML = `<i class="fas fa-spinner fa-spin me-2"></i> Buscando...`;
 
-            if (vectorCount) {
-                vectorCount.textContent = candidatesWithEmbeddings.length;
-            }
+    try {
+        const response = await fetch('/api/candidates-vectors-detailed', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ query: query })
+        });
 
-            if (candidatesWithEmbeddings.length > 0) {
-                status.textContent = `Búsqueda completada - ${candidatesWithEmbeddings.length} coincidencias encontradas`;
+        const result = await response.json();
 
-                // Encontrar el candidato con mayor similitud
-                const maxSim = Math.max(...candidatesWithEmbeddings.map(c => c.similarity));
+        if (result.status !== 'success') {
+            throw new Error(result.message || 'Error en búsqueda vectorial.');
+        }
 
-                resultsDiv.innerHTML = candidatesWithEmbeddings.map(candidate => {
-                    const highlight = candidate.similarity === maxSim ? 'border-warning shadow-lg' : 'border-info';
+        const vectorCandidates = result.candidates || [];
+        vectorCount.textContent = vectorCandidates.length;
 
-                    return `
+        if (vectorCandidates.length > 0) {
+            const maxSim = Math.max(...vectorCandidates.map(c => c.similarity));
+            status.textContent = `Búsqueda completada - ${vectorCandidates.length} coincidencias encontradas`;
+
+            resultsDiv.innerHTML = vectorCandidates.map(candidate => {
+                const highlight = candidate.similarity === maxSim ? 'border-warning shadow-lg' : 'border-info';
+                const name = candidate.name || 'Nombre desconocido';
+                return `
                     <div class="candidate-card bg-dark text-white p-3 rounded-4 shadow-sm mb-3 border ${highlight}">
                         <div class="row align-items-center">
                             <div class="col-md-8">
                                 <div class="d-flex align-items-center">
-                                    <div class="bg-info rounded-circle d-flex align-items-center justify-content-center me-3"
-                                         style="width: 50px; height: 50px;">
-                                        <span class="text-white fw-bold fs-5">${candidate.name ? candidate.name[0] : '?'}</span>
+                                    <div class="bg-info rounded-circle d-flex align-items-center justify-content-center me-3" style="width: 50px; height: 50px;">
+                                        <span class="text-white fw-bold fs-5">${name[0]}</span>
                                     </div>
                                     <div>
-                                        <h6 class="fw-bold mb-1">${candidate.name}</h6>
+                                        <h6 class="fw-bold mb-1">${name}</h6>
                                         <p class="mb-1 small text-white-50">
                                             ${candidate.email ? `<i class="fas fa-envelope me-1 text-info"></i>${candidate.email}` : ''}
                                             ${candidate.phone ? `<i class="fas fa-phone-alt ms-3 me-1 text-info"></i>${candidate.phone}` : ''}
@@ -193,203 +198,35 @@ function generateCandidateNodes() {
                             <div class="mt-2">
                                 <small class="text-muted">Habilidades:</small>
                                 <div class="mt-1">
-                                    ${JSON.parse(candidate.skills).slice(0, 5).map(skill =>
-                                        `<span class="badge bg-secondary me-1">${skill}</span>`).join('')}
+                                    ${JSON.parse(candidate.skills).slice(0, 5).map(skill => `<span class="badge bg-secondary me-1">${skill}</span>`).join('')}
                                 </div>
-                            </div>
-                        ` : ''}
-                    </div>
-                    `;
-                }).join('');
+                            </div>` : ''}
+                    </div>`;
+            }).join('');
 
-            } else {
-                status.textContent = 'No hay candidatos con embeddings.';
-                resultsDiv.innerHTML = '';
-            }
+            containerClassic.innerHTML = ''; 
+            renderCandidates(vectorCandidates);
+        } else {
 
-            candidates = candidatesWithEmbeddings;
-        })
-        .catch(error => {
-            console.error('Error cargando candidatos:', error);
-            status.textContent = 'Error al cargar los candidatos.';
-        });
-}
-
-
-
-function createScatterPoint(container, candidate, index, total) {
-    const card = document.createElement('div');
-    card.className = 'candidate-card-3d';
-    card.style.position = 'absolute';
-    
-    // Posición aleatoria dentro del contenedor
-    const x = Math.random() * 90;
-    const y = Math.random() * 80;
-    card.style.left = `${x}%`;
-    card.style.top = `${y}%`;
-    card.style.transform = 'translate(-50%, -50%)';
-    
-    // Estilo visual
-    card.innerHTML = `
-        <div class="card bg-dark text-white shadow-lg border-0 p-3 rounded-4" style="min-width: 220px;">
-            <h6 class="fw-bold mb-1">${candidate.name}</h6>
-            <p class="mb-1 small"><i class="fas fa-envelope me-1 text-info"></i> ${candidate.email}</p>
-            <div class="mb-2 small text-success"><i class="fas fa-bolt me-1"></i>${Math.round(candidate.similarity * 100)}% Match</div>
-            <button class="btn btn-outline-info btn-sm w-100" onclick="viewCandidate('${candidate.id}')">
-                <i class="fas fa-eye"></i> Ver Perfil
-            </button>
-        </div>
-    `;
-
-    card.style.zIndex = 3;
-    card.style.cursor = 'pointer';
-
-    container.appendChild(card);
-}
-
-
-function mapValue(value, min, max) {
-    // Map embedding values (typically -1 to 1) to screen coordinates
-    const normalized = Math.tanh(value); // Ensure [-1, 1] range
-    return min + (normalized + 1) * (max - min) / 2;
-}
-
-function generateAmbientPoints(space3D, count) {
-    for (let i = 0; i < count; i++) {
-        const point = document.createElement('div');
-        point.className = 'vector-point ambient-point';
-        
-        // Random distribution with some clustering
-        const x = Math.random() * 600;
-        const y = Math.random() * 600;
-        const z = (Math.random() - 0.5) * 200;
-        
-        point.style.position = 'absolute';
-        point.style.width = '2px';
-        point.style.height = '2px';
-        point.style.borderRadius = '50%';
-        point.style.background = `rgba(100, 150, 255, ${0.3 + Math.random() * 0.4})`;
-        point.style.left = x + 'px';
-        point.style.top = y + 'px';
-        point.style.transform = `translateZ(${z}px)`;
-        point.style.pointerEvents = 'none';
-        
-        space3D.appendChild(point);
-    }
-}
-
-function performPCA(embedding) {
-    // Simplified PCA for 3D projection
-    const mean = embedding.reduce((sum, val) => sum + val, 0) / embedding.length;
-    const centered = embedding.map(val => val - mean);
-    
-    // Simple projection to 3 dimensions
-    return [
-        centered.slice(0, 17).reduce((sum, val) => sum + val, 0),
-        centered.slice(17, 34).reduce((sum, val) => sum + val, 0),
-        centered.slice(34, 51).reduce((sum, val) => sum + val, 0)
-    ];
-}
-
-function mapToSpace(value, min, max) {
-    const normalized = Math.tanh(value / 10); // Normalize to [-1, 1]
-    return min + (normalized + 1) * (max - min) / 2;
-}
-
-function addRotationControls(space3D) {
-    let rotationX = 15;
-    let rotationY = 0;
-    let isRotating = false;
-    
-    const visualization = document.getElementById('vectorVisualization');
-    
-    // Very slow auto-rotation
-    const autoRotate = setInterval(() => {
-        if (!isRotating) {
-            rotationY += 0.1; // Much slower rotation
-            space3D.style.transform = `rotateX(${rotationX}deg) rotateY(${rotationY}deg)`;
+            status.textContent = 'No se encontraron coincidencias vectoriales. Usando búsqueda clásica...';
+            await fallbackClassicSearch(query);
         }
-    }, 200); // Less frequent updates
-    
-    // Manual rotation with mouse
-    visualization.addEventListener('mousedown', (e) => {
-        isRotating = true;
-        const startX = e.clientX;
-        const startY = e.clientY;
-        const startRotationX = rotationX;
-        const startRotationY = rotationY;
-        
-        const handleMouseMove = (e) => {
-            const deltaX = (e.clientX - startX) * 0.2; // Reduced sensitivity
-            const deltaY = (e.clientY - startY) * 0.2;
-            
-            rotationY = startRotationY + deltaX;
-            rotationX = startRotationX - deltaY;
-            rotationX = Math.max(-30, Math.min(60, rotationX)); // Limit vertical rotation
-            
-            space3D.style.transform = `rotateX(${rotationX}deg) rotateY(${rotationY}deg)`;
-        };
-        
-        const handleMouseUp = () => {
-            isRotating = false;
-            document.removeEventListener('mousemove', handleMouseMove);
-            document.removeEventListener('mouseup', handleMouseUp);
-        };
-        
-        document.addEventListener('mousemove', handleMouseMove);
-        document.addEventListener('mouseup', handleMouseUp);
-    });
-    
-    // Add visual feedback for interactivity
-    visualization.style.cursor = 'grab';
-    visualization.addEventListener('mousedown', () => {
-        visualization.style.cursor = 'grabbing';
-    });
-    document.addEventListener('mouseup', () => {
-        visualization.style.cursor = 'grab';
-    });
-}
 
-function showPointTooltip(point, candidate) {
-    const tooltip = document.createElement('div');
-    tooltip.className = 'point-tooltip';
-    tooltip.innerHTML = `
-        <div style="font-weight: bold; color: #fff;">${candidate.name}</div>
-        <div style="color: #ccc; font-size: 12px;">${candidate.email || 'Sin email'}</div>
-        <div style="color: #9cf; font-size: 11px;">Habilidades: ${candidate.skills ? JSON.parse(candidate.skills).slice(0,2).join(', ') : 'N/A'}</div>
-    `;
-    tooltip.style.position = 'absolute';
-    tooltip.style.background = 'rgba(0, 0, 0, 0.9)';
-    tooltip.style.padding = '8px';
-    tooltip.style.borderRadius = '6px';
-    tooltip.style.fontSize = '12px';
-    tooltip.style.zIndex = '1000';
-    tooltip.style.pointerEvents = 'none';
-    tooltip.style.border = '1px solid #555';
-    tooltip.style.left = (parseInt(point.style.left) + 20) + 'px';
-    tooltip.style.top = (parseInt(point.style.top) - 20) + 'px';
-    
-    point.parentNode.appendChild(tooltip);
-}
-
-function hidePointTooltip() {
-    const tooltip = document.querySelector('.point-tooltip');
-    if (tooltip) {
-        tooltip.remove();
+    } catch (error) {
+        console.error('Error en búsqueda vectorial:', error);
+        status.textContent = 'Error en búsqueda vectorial. Probando con búsqueda clásica...';
+        await fallbackClassicSearch(query);
+    } finally {
+        isSearching = false;
+        searchBtn.disabled = false;
+        searchBtn.innerHTML = `<i class="fas fa-rocket me-2"></i> Buscar`;
     }
 }
 
-function mapEmbeddingToVisualization(embeddingValue, min, max) {
-    // Map embedding values (typically between -1 and 1) to visualization coordinates
-    const normalized = (embeddingValue + 1) / 2; // Convert from [-1,1] to [0,1]
-    return min + normalized * (max - min);
-}
-
-async function performSemanticSearch(query) {
-    isSearching = true;
-    const searchBtn = document.getElementById('searchBtn');
-    searchBtn.disabled = true;
-    searchBtn.innerHTML = `<i class="fas fa-spinner fa-spin me-2"></i> Buscando...`;
+async function fallbackClassicSearch(query) {
+    const container = document.getElementById('candidateResults');
+    const resultsDiv = document.getElementById('candidateResultss');
+    const status = document.getElementById('searchStatus');
 
     try {
         const response = await fetch('/search-api', {
@@ -398,30 +235,22 @@ async function performSemanticSearch(query) {
             body: JSON.stringify({ query: query })
         });
 
-        if (!response.ok) {
-            throw new Error(`HTTP error! status: ${response.status}`);
-        }
-
         const result = await response.json();
-        console.log('Resultado de búsqueda recibido:', result);
+        const candidates = result.candidates || [];
 
-        if (result.status === 'success') {
-            if (!Array.isArray(result.candidates)) {
-                throw new Error("Formato de respuesta inválido: 'candidates' no es un array.");
-            }
+        resultsDiv.innerHTML = ''; 
 
-            renderCandidates(result.candidates);
+        if (candidates.length === 0) {
+            status.textContent = 'No se encontraron resultados.';
+            container.innerHTML = '<p class="text-muted">Ningún candidato coincide con tu búsqueda.</p>';
         } else {
-            alert(result.message || 'Ocurrió un error en la búsqueda.');
+            status.textContent = `Se encontraron ${candidates.length} resultados por coincidencia clásica.`;
+            renderCandidates(candidates);
         }
-
-    } catch (error) {
-        console.error('Error durante la búsqueda semántica:', error);
-        alert('Error de conexión con el servidor o fallo en el procesamiento.');
-    } finally {
-        isSearching = false;
-        searchBtn.disabled = false;
-        searchBtn.innerHTML = `<i class="fas fa-rocket me-2"></i> Buscar`;
+    } catch (err) {
+        console.error("Error en fallback clásico:", err);
+        status.textContent = 'Error en búsqueda clásica.';
+        container.innerHTML = '<p class="text-danger">No se pudo completar la búsqueda.</p>';
     }
 }
 
@@ -492,175 +321,5 @@ function formatDate(isoString) {
     return `${day}/${month}/${year}`;
 }
 
-
-
-function highlightTopMatches(space3D) {
-    const candidatePoints = space3D.querySelectorAll('.candidate-point');
-    const queryPoint = space3D.querySelector('.query-point');
-    
-    if (!queryPoint) return;
-    
-    const queryPos = {
-        x: parseInt(queryPoint.style.left),
-        y: parseInt(queryPoint.style.top),
-        z: 0
-    };
-    
-    // Calculate distances and sort
-    const pointsWithDistance = Array.from(candidatePoints).map(point => {
-        const pointPos = {
-            x: parseInt(point.style.left),
-            y: parseInt(point.style.top),
-            z: parseFloat(point.style.transform.match(/translateZ\(([^)]+)px\)/)?.[1] || 0)
-        };
-        
-        const distance = Math.sqrt(
-            Math.pow(queryPos.x - pointPos.x, 2) + 
-            Math.pow(queryPos.y - pointPos.y, 2) + 
-            Math.pow(queryPos.z - pointPos.z, 2)
-        );
-        
-        return { point, distance };
-    }).sort((a, b) => a.distance - b.distance);
-    
-    // Highlight top 3 matches
-    const colors = [
-        { bg: 'radial-gradient(circle, #00ff88 0%, #00d4ff 100%)', shadow: '0 0 25px #00ff88' },
-        { bg: 'radial-gradient(circle, #ffd700 0%, #ffb347 100%)', shadow: '0 0 20px #ffd700' },
-        { bg: 'radial-gradient(circle, #ff6b6b 0%, #ee5a24 100%)', shadow: '0 0 15px #ff6b6b' }
-    ];
-    
-    pointsWithDistance.slice(0, 3).forEach(({ point }, index) => {
-        setTimeout(() => {
-            point.style.background = colors[index].bg;
-            point.style.boxShadow = colors[index].shadow;
-            point.style.transform = point.style.transform.replace(/scale\([^)]*\)/, 'scale(2)');
-            point.style.animation = 'bounce 0.8s ease-in-out';
-        }, index * 300);
-    });
-}
-
-function createQueryVector() {
-    const queryVector = document.createElement('div');
-    queryVector.className = 'search-vector query-vector';
-    queryVector.style.position = 'absolute';
-    queryVector.style.width = '20px';
-    queryVector.style.height = '20px';
-    queryVector.style.borderRadius = '50%';
-    queryVector.style.background = 'radial-gradient(circle, #ff6b6b 0%, #ee5a24 100%)';
-    queryVector.style.boxShadow = '0 0 20px #ff6b6b';
-    queryVector.style.left = '240px';
-    queryVector.style.top = '240px';
-    queryVector.style.zIndex = '10';
-    queryVector.style.border = '2px solid #ffffff';
-    
-    // Add pulsing animation
-    queryVector.style.animation = 'pulse 1.5s infinite';
-    
-    return queryVector;
-}
-
-function animateQueryEmbeddingGeneration(queryVector) {
-    // Create embedding visualization around query vector
-    for (let i = 0; i < 8; i++) {
-        setTimeout(() => {
-            const embeddingRing = document.createElement('div');
-            embeddingRing.className = 'embedding-ring';
-            embeddingRing.style.position = 'absolute';
-            embeddingRing.style.width = (30 + i * 15) + 'px';
-            embeddingRing.style.height = (30 + i * 15) + 'px';
-            embeddingRing.style.border = '2px solid rgba(255, 107, 107, 0.3)';
-            embeddingRing.style.borderRadius = '50%';
-            embeddingRing.style.left = (250 - (15 + i * 7.5)) + 'px';
-            embeddingRing.style.top = (250 - (15 + i * 7.5)) + 'px';
-            embeddingRing.style.animation = 'expand 1s ease-out forwards';
-            
-            queryVector.parentNode.appendChild(embeddingRing);
-            
-            // Remove after animation
-            setTimeout(() => {
-                if (embeddingRing.parentNode) {
-                    embeddingRing.parentNode.removeChild(embeddingRing);
-                }
-            }, 1000);
-        }, i * 100);
-    }
-}
-
-
-function calculateMockSimilarity(embedding) {
-    // Simulate realistic similarity calculation based on actual embedding
-    if (!embedding || embedding.length === 0) return Math.random() * 0.3;
-    
-    // Use actual embedding values to create realistic similarity
-    const magnitude = Math.sqrt(embedding.slice(0, 10).reduce((sum, val) => sum + val * val, 0));
-    const normalized = magnitude / 10; // Normalize to reasonable range
-    return Math.min(Math.max(normalized + Math.random() * 0.2 - 0.1, 0), 1);
-}
-
-function displaySearchResults(results) {
-    const container = document.getElementById('resultsContainer');
-    const resultsDiv = document.getElementById('candidatesResults');
-    
-    if (results.length === 0) {
-        resultsDiv.innerHTML = `
-            <div class="text-center text-muted py-5">
-                <i class="fas fa-search fa-3x mb-3"></i>
-                <h5>No se encontraron candidatos</h5>
-                <p>Intenta con términos de búsqueda diferentes</p>
-            </div>
-        `;
-    } else {
-        resultsDiv.innerHTML = results.map(candidate => `
-            <div class="candidate-card p-3">
-                <div class="row align-items-center">
-                    <div class="col-md-8">
-                        <div class="d-flex align-items-center">
-                            <div class="bg-primary rounded-circle d-flex align-items-center justify-content-center me-3" 
-                                 style="width: 50px; height: 50px;">
-                                <span class="text-white fw-bold fs-5">
-                                    ${candidate.name ? candidate.name[0] : 'U'}
-                                </span>
-                            </div>
-                            <div>
-                                <h5 class="text-white mb-1">${candidate.name}</h5>
-                                <p class="text-muted mb-0">
-                                    ${candidate.email ? `<i class="fas fa-envelope me-2"></i>${candidate.email}` : ''}
-                                    ${candidate.phone ? `<i class="fas fa-phone ms-3 me-2"></i>${candidate.phone}` : ''}
-                                </p>
-                            </div>
-                        </div>
-                    </div>
-                    <div class="col-md-2 text-center">
-                        <div class="similarity-score">
-                            ${Math.round(candidate.similarity * 100)}% Match
-                        </div>
-                    </div>
-                    <div class="col-md-2 text-end">
-                        <a href="/candidate/${candidate.id}" class="btn btn-outline-primary" target="_blank">
-                            <i class="fas fa-eye me-1"></i>Ver Perfil
-                        </a>
-                    </div>
-                </div>
-                ${candidate.skills ? `
-                    <div class="mt-2">
-                        <small class="text-muted">Habilidades:</small>
-                        <div class="mt-1">
-                            ${JSON.parse(candidate.skills).slice(0, 5).map(skill => 
-                                `<span class="badge bg-secondary me-1">${skill}</span>`
-                            ).join('')}
-                        </div>
-                    </div>
-                ` : ''}
-            </div>
-        `).join('');
-    }
-    
-    container.style.display = 'block';
-    container.scrollIntoView({ behavior: 'smooth' });
-}
-document.addEventListener("DOMContentLoaded", function () {
-    generateCandidateNodes();
-  });
 </script>
 {% endblock %}
