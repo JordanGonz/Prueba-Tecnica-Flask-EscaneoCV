@@ -10,5 +10,13 @@ python -m venv venv
 ```bash
 pip install -r requirements.txt
 ```
+# CREAR ARCHICO .ENV Y PEGARLO
+```bash
+# .env
+OPENAI_API_KEY=
+OPENAI_ORG_ID=org-
+SESSION_SECRET=clave-super-secreta
+
+```
 
 
