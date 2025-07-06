@@ -19,4 +19,6 @@ SESSION_SECRET=clave-super-secreta
 
 ```
 
+## COMO OBETENER LA API KEY
+https://platform.openai.com/settings/proj_cHWWUdVgktRX1hnQAMKoprGD/api-keys
 
