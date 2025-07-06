@@ -16,12 +16,16 @@ POPPLER_PATH = os.path.join(BASE_DIR, "..", "poppler", "Library", "bin")
 logger = logging.getLogger(__name__)
 
 OPENAI_API_KEY = os.getenv("OPENAI_API_KEY") 
+OPENAI_ORG_ID = os.getenv("OPENAI_ORG_ID")
 
 if not OPENAI_API_KEY:
     logger.warning("OpenAI API key not found. Vision parsing will be disabled.")
     openai_client = None
 else:
-   openai_client = OpenAI(api_key=OPENAI_API_KEY)
+    openai_client = OpenAI(
+        api_key=OPENAI_API_KEY,
+        organization=OPENAI_ORG_ID
+    )
 
 def pdf_to_images(pdf_path: str) -> List[Image.Image]:
     """
