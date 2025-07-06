@@ -50,3 +50,18 @@
 .bg-info {
     background-color: #17a2b8 !important;
 }
+
+
+@media (max-width: 576px) {
+    .dashboard-buttons {
+        width: 100%;
+        display: flex;
+        flex-direction: column;
+        gap: 0.5rem;
+    }
+
+    .dashboard-buttons .btn {
+        width: 100%;
+        text-align: center;
+    }
+}

@@ -102,3 +102,20 @@
 .summary-card p {
     margin: 0;
 }
+
+
+@media (max-width: 576px) {
+    .btn-group-responsive {
+        width: 100%;
+        flex-direction: column;
+    }
+
+    .btn-group-responsive .btn {
+        width: 100%;
+        text-align: center;
+    }
+
+    .display-6 {
+        font-size: 1.5rem;
+    }
+}

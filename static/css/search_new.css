@@ -105,3 +105,61 @@
     font-size: 0.95rem;
 }
 
+.card-body p {
+    font-size: 0.9rem;
+}
+
+.card-header {
+    font-size: 1rem;
+    padding: 0.75rem 1rem;
+}
+
+input.form-control {
+    background-color: rgba(255,255,255,0.8) !important;
+    color: #000 !important;
+}
+
+@media (max-width: 576px) {
+  .btn-group-mobile {
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+    width: 100%;
+  }
+
+  .btn-group-mobile .btn {
+    width: 100%;
+    text-align: center;
+  }
+}
+
+@media (max-width: 576px) {
+    .candidate-card {
+        padding: 1rem !important;
+        font-size: 0.95rem;
+    }
+
+    .candidate-card .badge {
+        font-size: 0.75rem;
+        max-width: 100%;
+        white-space: normal;
+    }
+}
+
+@media (max-width: 576px) {
+    #vectorVisualization {
+        padding: 1rem;
+    }
+
+    .candidate-card .row.align-items-center > div {
+        margin-bottom: 1rem;
+    }
+
+    .candidate-card .col-md-2.text-center,
+    .candidate-card .col-md-2.text-end {
+        text-align: left !important;
+    }
+}
+
+
+
