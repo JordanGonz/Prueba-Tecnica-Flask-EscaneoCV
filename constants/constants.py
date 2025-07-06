@@ -10,3 +10,11 @@ UNIVERSITY_ALIASES = {
     "espoch": "Escuela Superior Politécnica de Chimborazo",
     "unl": "Universidad Nacional de Loja",
 }
+
+ROLE_ALIASES = {
+    "desarrolladores": ["desarrollador", "developer", "programador", "ingeniero", "software"],
+    "programadores": ["programador", "desarrollador", "developer"],
+    "frontend": ["frontend", "react", "angular", "vue", "html", "css", "javascript"],
+    "backend": ["backend", "java", "c#", "python", "spring", ".net", "node"],
+    "fullstack": ["full stack", "frontend", "backend", "fullstack"],
+}

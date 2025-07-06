@@ -4,29 +4,35 @@ from sqlalchemy import or_, and_
 from extensions import db
 from models import Candidate
 import re
-from constants.constants import UNIVERSITY_ALIASES
+import json
+from constants.constants import UNIVERSITY_ALIASES,ROLE_ALIASES
 
 logger = logging.getLogger(__name__)
 
 def extract_keywords(text: str) -> List[str]:
-    """
-    Extrae palabras clave relevantes del texto para búsqueda.
-    Reemplaza alias conocidos (como 'espol') por su forma completa.
-    """
     common_words = {'dame', 'los', 'las', 'en', 'con', 'de', 'que', 'quiero', 'y', 'para', 'un', 'una', 'me'}
     words = re.findall(r'\b\w+\b', text.lower())
-
-    # Reemplaza alias por su forma extendida
     expanded_words = []
+
     for w in words:
         if w not in common_words and len(w) > 2:
             if w in UNIVERSITY_ALIASES:
-                full_name = UNIVERSITY_ALIASES[w]
-                expanded_words.extend(re.findall(r'\b\w+\b', full_name.lower()))  # divide "Universidad Técnica..." en palabras
+                expanded_words.append(UNIVERSITY_ALIASES[w].lower())
+            elif w in ROLE_ALIASES:
+                expanded_words.extend(ROLE_ALIASES[w])
             else:
                 expanded_words.append(w)
 
     return expanded_words
+
+
+def is_university(institution: str) -> bool:
+    """
+    Determina si una institución es una universidad o equivalente.
+    """
+    institution = institution.lower()
+    universidad_keywords = ["universidad", "escuela superior", "politécnica", "polytechnic", "institute of technology"]
+    return any(kw in institution for kw in universidad_keywords)
 
 
 def search_candidates(query: str) -> List[Candidate]:
@@ -36,19 +42,32 @@ def search_candidates(query: str) -> List[Candidate]:
 
         keywords = extract_keywords(query)
 
-        # Construye condición AND con ILIKE en education y full_text
-        filters = [
-            and_(*[Candidate.education.ilike(f"%{kw}%") for kw in keywords])
-        ]
-
-        # Si quieres, también puedes buscar en full_text, pero con menos peso
-        filters.append(
-            and_(*[Candidate.full_text.ilike(f"%{kw}%") for kw in keywords])
-        )
+        # Genera condiciones por campo (con OR interno por keyword)
+        education_filter = or_(*[Candidate.education.ilike(f"%{kw}%") for kw in keywords])
+        skills_filter = or_(*[Candidate.skills.ilike(f"%{kw}%") for kw in keywords])
+        fulltext_filter = or_(*[Candidate.full_text.ilike(f"%{kw}%") for kw in keywords])
+        experience_filter = or_(*[Candidate.experience.ilike(f"%{kw}%") for kw in keywords])
 
         candidates = db.session.query(Candidate).filter(
-            or_(*filters)
+            or_(
+                education_filter,
+                skills_filter,
+                fulltext_filter,
+                experience_filter
+            )
         ).order_by(Candidate.created_at.desc()).limit(50).all()
+
+        # Si se menciona "universidad", filtrar los que tienen universidades reales
+        if any(word in query.lower() for word in ["universidad", "universidades"]):
+            filtered_candidates = []
+            for c in candidates:
+                try:
+                    education_data = json.loads(c.education) if isinstance(c.education, str) else c.education
+                    if any(is_university(ed.get("institution", "")) for ed in education_data if isinstance(ed, dict)):
+                        filtered_candidates.append(c)
+                except Exception as parse_error:
+                    logger.warning(f"Error parsing education JSON for candidate {c.id}: {parse_error}")
+            candidates = filtered_candidates
 
         logger.info(f"Search for keywords {keywords} returned {len(candidates)} candidates")
         return candidates
@@ -56,6 +75,7 @@ def search_candidates(query: str) -> List[Candidate]:
     except Exception as e:
         logger.error(f"Error searching candidates: {str(e)}")
         raise Exception(f"Database search failed: {str(e)}")
+
 
 def get_all_candidates(limit: int = 100, offset: int = 0) -> List[Candidate]:
     """
