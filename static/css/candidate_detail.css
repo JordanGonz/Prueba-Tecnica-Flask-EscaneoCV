@@ -1,0 +1,13 @@
+@media (max-width: 576px) {
+    .profile-action-buttons {
+        width: 100%;
+        display: flex;
+        flex-direction: column;
+        gap: 0.5rem;
+    }
+
+    .profile-action-buttons .btn {
+        width: 100%;
+        text-align: center;
+    }
+}
