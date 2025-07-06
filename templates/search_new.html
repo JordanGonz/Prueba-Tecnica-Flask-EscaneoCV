@@ -74,11 +74,6 @@
     <div id="candidateResultss" class="mt-4"></div>
 </div>
 
-
-    
-
-
-
 </div>
 {% endblock %}
 
@@ -145,8 +140,11 @@ function generateCandidateNodes() {
     const status = document.getElementById('searchStatus');
     const vectorCount = document.getElementById('vectorCount');
     const resultsDiv = document.getElementById('candidateResultss');
+    const queryInput = document.getElementById('search_query');
+    const query = queryInput ? queryInput.value.trim() : "";
 
-    fetch('/api/candidates-vectors-detailed')
+    // Enviar la query como parámetro GET
+    fetch(`/api/candidates-vectors-detailed?query=${encodeURIComponent(query)}`)
         .then(response => response.json())
         .then(data => {
             const candidatesWithEmbeddings = data.candidates || [];
@@ -158,9 +156,14 @@ function generateCandidateNodes() {
             if (candidatesWithEmbeddings.length > 0) {
                 status.textContent = `Búsqueda completada - ${candidatesWithEmbeddings.length} coincidencias encontradas`;
 
-                // 👉 Renderizar directamente aquí SIN llamar a renderCandidates
-                resultsDiv.innerHTML = candidatesWithEmbeddings.map(candidate => `
-                    <div class="candidate-card bg-dark text-white p-3 rounded-4 shadow-sm mb-3 border border-info">
+                // Encontrar el candidato con mayor similitud
+                const maxSim = Math.max(...candidatesWithEmbeddings.map(c => c.similarity));
+
+                resultsDiv.innerHTML = candidatesWithEmbeddings.map(candidate => {
+                    const highlight = candidate.similarity === maxSim ? 'border-warning shadow-lg' : 'border-info';
+
+                    return `
+                    <div class="candidate-card bg-dark text-white p-3 rounded-4 shadow-sm mb-3 border ${highlight}">
                         <div class="row align-items-center">
                             <div class="col-md-8">
                                 <div class="d-flex align-items-center">
@@ -196,7 +199,8 @@ function generateCandidateNodes() {
                             </div>
                         ` : ''}
                     </div>
-                `).join('');
+                    `;
+                }).join('');
 
             } else {
                 status.textContent = 'No hay candidatos con embeddings.';
@@ -210,7 +214,6 @@ function generateCandidateNodes() {
             status.textContent = 'Error al cargar los candidatos.';
         });
 }
-
 
 
 
@@ -245,130 +248,10 @@ function createScatterPoint(container, candidate, index, total) {
 }
 
 
-function createAmbientScatterPoints(container, count) {
-    for (let i = 0; i < count; i++) {
-        const point = document.createElement('div');
-        point.className = 'scatter-point ambient-point';
-        
-        const x = Math.random() * (container.offsetWidth || 600);
-        const y = Math.random() * (container.offsetHeight || 500);
-        
-        point.style.position = 'absolute';
-        point.style.left = x + 'px';
-        point.style.top = y + 'px';
-        point.style.width = '3px';
-        point.style.height = '3px';
-        point.style.borderRadius = '50%';
-        point.style.background = `rgba(100, 150, 255, ${0.2 + Math.random() * 0.3})`;
-        point.style.pointerEvents = 'none';
-        
-        container.appendChild(point);
-    }
-}
-
 function mapValue(value, min, max) {
     // Map embedding values (typically -1 to 1) to screen coordinates
     const normalized = Math.tanh(value); // Ensure [-1, 1] range
     return min + (normalized + 1) * (max - min) / 2;
-}
-
-function showTooltip(point, candidate) {
-    const tooltip = document.createElement('div');
-    tooltip.className = 'candidate-tooltip';
-    tooltip.innerHTML = `
-        <div style="font-weight: bold;">${candidate.name}</div>
-        <div style="font-size: 12px; color: #ccc;">${candidate.email || 'Sin email'}</div>
-    `;
-    tooltip.style.position = 'absolute';
-    tooltip.style.background = 'rgba(0, 0, 0, 0.9)';
-    tooltip.style.color = 'white';
-    tooltip.style.padding = '8px';
-    tooltip.style.borderRadius = '6px';
-    tooltip.style.fontSize = '12px';
-    tooltip.style.zIndex = '1000';
-    tooltip.style.pointerEvents = 'none';
-    tooltip.style.border = '1px solid #555';
-    tooltip.style.left = (parseInt(point.style.left) + 15) + 'px';
-    tooltip.style.top = (parseInt(point.style.top) - 15) + 'px';
-    
-    point.parentNode.appendChild(tooltip);
-}
-
-function hideTooltip() {
-    const tooltip = document.querySelector('.candidate-tooltip');
-    if (tooltip) {
-        tooltip.remove();
-    }
-}
-
-function createCandidatePoint(space3D, candidate, index, total) {
-    const point = document.createElement('div');
-    point.className = 'vector-point candidate-point';
-    
-    // Use PCA-like positioning based on actual embeddings
-    let x, y, z;
-    if (candidate.embedding && candidate.embedding.length >= 3) {
-        // Use first 3 dimensions with PCA transformation
-        const pca = performPCA(candidate.embedding.slice(0, 50)); // Use first 50 dims
-        x = mapToSpace(pca[0], 100, 500);
-        y = mapToSpace(pca[1], 100, 500);
-        z = mapToSpace(pca[2], -100, 100);
-    } else {
-        // Cluster-like fallback distribution
-        const cluster = Math.floor(index / (total / 3));
-        const clusterCenters = [
-            {x: 200, y: 200, z: 0},
-            {x: 400, y: 300, z: 50},
-            {x: 300, y: 150, z: -30}
-        ];
-        const center = clusterCenters[cluster] || clusterCenters[0];
-        x = center.x + (Math.random() - 0.5) * 120;
-        y = center.y + (Math.random() - 0.5) * 120;
-        z = center.z + (Math.random() - 0.5) * 60;
-    }
-    
-    // Style the point
-    point.style.position = 'absolute';
-    point.style.width = '6px';
-    point.style.height = '6px';
-    point.style.borderRadius = '50%';
-    point.style.background = 'radial-gradient(circle, #4a9eff 0%, #2d5aa0 100%)';
-    point.style.boxShadow = '0 0 8px rgba(74, 158, 255, 0.6)';
-    point.style.left = x + 'px';
-    point.style.top = y + 'px';
-    point.style.transform = `translateZ(${z}px)`;
-    point.style.transition = 'all 0.3s ease';
-    point.style.cursor = 'pointer';
-    point.style.zIndex = '10';
-    
-    // Store data
-    point.setAttribute('data-candidate-id', candidate.id);
-    point.setAttribute('data-candidate-name', candidate.name);
-    point.setAttribute('data-embedding', JSON.stringify(candidate.embedding));
-    point.setAttribute('data-original-pos', JSON.stringify({x, y, z}));
-    
-    // Hover effects
-    point.addEventListener('mouseenter', () => {
-        point.style.transform = `translateZ(${z + 20}px) scale(2)`;
-        point.style.background = 'radial-gradient(circle, #ff6b6b 0%, #ee5a24 100%)';
-        point.style.boxShadow = '0 0 15px rgba(255, 107, 107, 0.8)';
-        
-        // Show tooltip
-        showPointTooltip(point, candidate);
-    });
-    
-    point.addEventListener('mouseleave', () => {
-        point.style.transform = `translateZ(${z}px) scale(1)`;
-        point.style.background = 'radial-gradient(circle, #4a9eff 0%, #2d5aa0 100%)';
-        point.style.boxShadow = '0 0 8px rgba(74, 158, 255, 0.6)';
-        hidePointTooltip();
-    });
-    
-    point.addEventListener('click', () => {
-        window.open(`/candidate/${candidate.id}`, '_blank');
-    });
-    
-    space3D.appendChild(point);
 }
 
 function generateAmbientPoints(space3D, count) {
@@ -611,216 +494,6 @@ function formatDate(isoString) {
 
 
 
-function animateVectorSearch(query) {
-    const scatterPlot = document.querySelector('.scatter-plot-3d');
-    
-    console.log('Starting scatter plot search animation for:', query);
-    
-    if (!scatterPlot) return;
-    
-    // Reset all points to default state
-    const candidatePoints = scatterPlot.querySelectorAll('.candidate-point');
-    candidatePoints.forEach(point => {
-        point.style.background = 'radial-gradient(circle, #4a9eff 0%, #2d5aa0 100%)';
-        point.style.boxShadow = '0 0 10px rgba(74, 158, 255, 0.6)';
-        point.style.transform = 'scale(1)';
-    });
-    
-    // Clear any existing similarity labels
-    const existingLabels = scatterPlot.querySelectorAll('.similarity-label');
-    existingLabels.forEach(label => label.remove());
-    
-    // Phase 1: Animate similarity calculation
-    setTimeout(() => {
-        animateScatterSimilarity(scatterPlot);
-    }, 200);
-}
-
-function animateScatterSimilarity(scatterPlot) {
-    const candidatePoints = scatterPlot.querySelectorAll('.candidate-point');
-    
-    // Create ripple effect from center
-    const ripple = document.createElement('div');
-    ripple.style.position = 'absolute';
-    ripple.style.left = '50%';
-    ripple.style.top = '50%';
-    ripple.style.width = '20px';
-    ripple.style.height = '20px';
-    ripple.style.borderRadius = '50%';
-    ripple.style.background = 'radial-gradient(circle, rgba(255, 71, 87, 0.6) 0%, transparent 70%)';
-    ripple.style.transform = 'translate(-50%, -50%)';
-    ripple.style.animation = 'expandRipple 2s ease-out forwards';
-    ripple.style.pointerEvents = 'none';
-    ripple.style.zIndex = '5';
-    
-    scatterPlot.appendChild(ripple);
-    
-    // Animate each point with a wave effect
-    candidatePoints.forEach((point, index) => {
-        setTimeout(() => {
-            // Pulse effect
-            point.style.transform = 'scale(1.3)';
-            point.style.background = 'radial-gradient(circle, #ffb347 0%, #ff6b6b 100%)';
-            point.style.boxShadow = '0 0 15px rgba(255, 179, 71, 0.8)';
-            
-            // Return to normal
-            setTimeout(() => {
-                point.style.transform = 'scale(1)';
-                point.style.background = 'radial-gradient(circle, #4a9eff 0%, #2d5aa0 100%)';
-                point.style.boxShadow = '0 0 10px rgba(74, 158, 255, 0.6)';
-            }, 300);
-            
-        }, index * 100);
-    });
-    
-    // Remove ripple after animation
-    setTimeout(() => {
-        if (ripple.parentNode) {
-            ripple.parentNode.removeChild(ripple);
-        }
-    }, 2000);
-}
-
-function highlightMatchedCandidates(results) {
-    const scatterPlot = document.querySelector('.scatter-plot-3d');
-    if (!scatterPlot) return;
-    
-    // Highlight matched candidates based on search results
-    results.forEach((result, index) => {
-        const candidatePoint = scatterPlot.querySelector(`[data-candidate-id="${result.id}"]`);
-        if (candidatePoint) {
-            setTimeout(() => {
-                const colors = [
-                    { bg: 'radial-gradient(circle, #00ff88 0%, #00d4ff 100%)', shadow: '0 0 20px #00ff88' },
-                    { bg: 'radial-gradient(circle, #ffd700 0%, #ffb347 100%)', shadow: '0 0 18px #ffd700' },
-                    { bg: 'radial-gradient(circle, #ff6b6b 0%, #ee5a24 100%)', shadow: '0 0 15px #ff6b6b' }
-                ];
-                
-                const colorIndex = Math.min(index, colors.length - 1);
-                candidatePoint.style.background = colors[colorIndex].bg;
-                candidatePoint.style.boxShadow = colors[colorIndex].shadow;
-                candidatePoint.style.transform = 'scale(1.5)';
-                candidatePoint.style.animation = 'bounce 0.6s ease-in-out';
-                
-                // Add similarity label
-                const similarityLabel = document.createElement('div');
-                similarityLabel.className = 'similarity-label';
-                similarityLabel.textContent = `${(result.similarity * 100).toFixed(1)}%`;
-                similarityLabel.style.position = 'absolute';
-                similarityLabel.style.left = (parseInt(candidatePoint.style.left) + 15) + 'px';
-                similarityLabel.style.top = (parseInt(candidatePoint.style.top) - 10) + 'px';
-                similarityLabel.style.color = '#ffffff';
-                similarityLabel.style.fontSize = '11px';
-                similarityLabel.style.fontWeight = 'bold';
-                similarityLabel.style.background = 'rgba(0, 0, 0, 0.8)';
-                similarityLabel.style.padding = '2px 4px';
-                similarityLabel.style.borderRadius = '3px';
-                similarityLabel.style.zIndex = '15';
-                similarityLabel.style.pointerEvents = 'none';
-                
-                scatterPlot.appendChild(similarityLabel);
-                
-            }, index * 200);
-        }
-    });
-}
-
-function createQueryPoint(space3D) {
-    const queryPoint = document.createElement('div');
-    queryPoint.className = 'vector-point query-point';
-    queryPoint.style.position = 'absolute';
-    queryPoint.style.width = '12px';
-    queryPoint.style.height = '12px';
-    queryPoint.style.borderRadius = '50%';
-    queryPoint.style.background = 'radial-gradient(circle, #ff4757 0%, #c44569 100%)';
-    queryPoint.style.boxShadow = '0 0 20px rgba(255, 71, 87, 0.8)';
-    queryPoint.style.left = '300px';
-    queryPoint.style.top = '300px';
-    queryPoint.style.transform = 'translateZ(0px) scale(1.5)';
-    queryPoint.style.border = '2px solid #ffffff';
-    queryPoint.style.animation = 'pulse 1.5s infinite';
-    queryPoint.style.zIndex = '50';
-    
-    space3D.appendChild(queryPoint);
-    return queryPoint;
-}
-
-function animateVectorSimilarityCalculation3D(space3D, queryPoint) {
-    const candidatePoints = space3D.querySelectorAll('.candidate-point');
-    const queryPos = {
-        x: parseInt(queryPoint.style.left),
-        y: parseInt(queryPoint.style.top),
-        z: 0
-    };
-    
-    candidatePoints.forEach((point, index) => {
-        setTimeout(() => {
-            // Calculate distance for visual similarity
-            const pointPos = {
-                x: parseInt(point.style.left),
-                y: parseInt(point.style.top),
-                z: parseFloat(point.style.transform.match(/translateZ\(([^)]+)px\)/)?.[1] || 0)
-            };
-            
-            const distance = Math.sqrt(
-                Math.pow(queryPos.x - pointPos.x, 2) + 
-                Math.pow(queryPos.y - pointPos.y, 2) + 
-                Math.pow(queryPos.z - pointPos.z, 2)
-            );
-            
-            // Create connection line
-            const line = createConnectionLine3D(queryPos, pointPos, distance);
-            space3D.appendChild(line);
-            
-            // Animate point
-            point.style.transform = `translateZ(${pointPos.z}px) scale(1.8)`;
-            const similarity = Math.max(0, 1 - distance / 500);
-            const intensity = similarity * 0.8 + 0.2;
-            
-            if (similarity > 0.3) {
-                point.style.background = `radial-gradient(circle, rgba(0, 255, 136, ${intensity}) 0%, rgba(0, 212, 255, ${intensity * 0.8}) 100%)`;
-                point.style.boxShadow = `0 0 15px rgba(0, 255, 136, ${intensity})`;
-            }
-            
-            // Clean up after animation
-            setTimeout(() => {
-                point.style.transform = `translateZ(${pointPos.z}px) scale(1)`;
-                if (line.parentNode) line.parentNode.removeChild(line);
-            }, 1000);
-            
-        }, index * 100);
-    });
-}
-
-function createConnectionLine3D(pos1, pos2, distance) {
-    const line = document.createElement('div');
-    line.className = 'connection-line-3d';
-    
-    const length = Math.sqrt(
-        Math.pow(pos2.x - pos1.x, 2) + 
-        Math.pow(pos2.y - pos1.y, 2)
-    );
-    const angle = Math.atan2(pos2.y - pos1.y, pos2.x - pos1.x) * 180 / Math.PI;
-    
-    const similarity = Math.max(0, 1 - distance / 500);
-    const opacity = similarity * 0.6 + 0.1;
-    
-    line.style.position = 'absolute';
-    line.style.width = length + 'px';
-    line.style.height = '1px';
-    line.style.background = `linear-gradient(90deg, 
-        rgba(255, 71, 87, ${opacity}) 0%, 
-        rgba(0, 255, 136, ${opacity}) 100%)`;
-    line.style.left = pos1.x + 'px';
-    line.style.top = pos1.y + 'px';
-    line.style.transformOrigin = '0 50%';
-    line.style.transform = `rotate(${angle}deg) translateZ(${(pos1.z + pos2.z) / 2}px)`;
-    line.style.animation = 'connectionPulse 1s ease-out';
-    line.style.zIndex = '20';
-    
-    return line;
-}
-
 function highlightTopMatches(space3D) {
     const candidatePoints = space3D.querySelectorAll('.candidate-point');
     const queryPoint = space3D.querySelector('.query-point');
@@ -914,74 +587,6 @@ function animateQueryEmbeddingGeneration(queryVector) {
     }
 }
 
-function animateVectorSimilarityCalculation() {
-    const candidateNodes = document.querySelectorAll('.candidate-node');
-    
-    candidateNodes.forEach((node, index) => {
-        setTimeout(() => {
-            // Create similarity calculation line
-            const line = createSimilarityLine(250, 250, 
-                parseInt(node.style.left), parseInt(node.style.top));
-            node.parentNode.appendChild(line);
-            
-            // Animate calculation
-            node.style.transform = 'scale(1.5)';
-            node.style.boxShadow = '0 0 15px #00d4ff';
-            
-            // Show similarity percentage
-            setTimeout(() => {
-                const embedding = JSON.parse(node.getAttribute('data-embedding') || '[]');
-                const similarity = calculateMockSimilarity(embedding);
-                
-                const simLabel = document.createElement('div');
-                simLabel.className = 'similarity-label';
-                simLabel.textContent = `${(similarity * 100).toFixed(1)}%`;
-                simLabel.style.position = 'absolute';
-                simLabel.style.left = (parseInt(node.style.left) + 20) + 'px';
-                simLabel.style.top = (parseInt(node.style.top) - 10) + 'px';
-                simLabel.style.color = '#ffffff';
-                simLabel.style.fontSize = '12px';
-                simLabel.style.fontWeight = 'bold';
-                simLabel.style.background = 'rgba(0, 0, 0, 0.7)';
-                simLabel.style.padding = '2px 6px';
-                simLabel.style.borderRadius = '4px';
-                simLabel.style.zIndex = '15';
-                
-                node.parentNode.appendChild(simLabel);
-                
-                // Clean up after delay
-                setTimeout(() => {
-                    node.style.transform = 'scale(1)';
-                    node.style.boxShadow = '';
-                    if (line.parentNode) line.parentNode.removeChild(line);
-                    if (simLabel.parentNode) simLabel.parentNode.removeChild(simLabel);
-                }, 1500);
-            }, 500);
-        }, index * 150);
-    });
-}
-
-function createSimilarityLine(x1, y1, x2, y2) {
-    const line = document.createElement('div');
-    line.className = 'similarity-line';
-    
-    const length = Math.sqrt((x2 - x1) ** 2 + (y2 - y1) ** 2);
-    const angle = Math.atan2(y2 - y1, x2 - x1) * 180 / Math.PI;
-    
-    line.style.position = 'absolute';
-    line.style.width = length + 'px';
-    line.style.height = '2px';
-    line.style.background = 'linear-gradient(90deg, #ff6b6b 0%, #00d4ff 100%)';
-    line.style.left = x1 + 'px';
-    line.style.top = y1 + 'px';
-    line.style.transformOrigin = '0 50%';
-    line.style.transform = `rotate(${angle}deg)`;
-    line.style.opacity = '0.7';
-    line.style.zIndex = '5';
-    
-    return line;
-}
-
 
 function calculateMockSimilarity(embedding) {
     // Simulate realistic similarity calculation based on actual embedding
@@ -991,224 +596,6 @@ function calculateMockSimilarity(embedding) {
     const magnitude = Math.sqrt(embedding.slice(0, 10).reduce((sum, val) => sum + val * val, 0));
     const normalized = magnitude / 10; // Normalize to reasonable range
     return Math.min(Math.max(normalized + Math.random() * 0.2 - 0.1, 0), 1);
-}
-
-function animateResultRanking() {
-    const candidateNodes = document.querySelectorAll('.candidate-node');
-    
-    // Sort nodes by position (simulate ranking)
-    const sortedNodes = Array.from(candidateNodes).sort((a, b) => {
-        const aDistance = Math.sqrt((parseInt(a.style.left) - 250) ** 2 + (parseInt(a.style.top) - 250) ** 2);
-        const bDistance = Math.sqrt((parseInt(b.style.left) - 250) ** 2 + (parseInt(b.style.top) - 250) ** 2);
-        return aDistance - bDistance;
-    });
-    
-    // Highlight top matches
-    sortedNodes.slice(0, 3).forEach((node, index) => {
-        setTimeout(() => {
-            const colors = ['#00ff88', '#00d4ff', '#ffd700'];
-            node.style.background = colors[index];
-            node.style.boxShadow = `0 0 20px ${colors[index]}`;
-            node.style.animation = 'bounce 0.5s ease-in-out';
-        }, index * 200);
-    });
-}
-
-function createSearchWave() {
-    const wave = document.createElement('div');
-    wave.className = 'search-wave';
-    
-    const visualization = document.getElementById('vectorVisualization');
-    const rect = visualization.getBoundingClientRect();
-    
-    wave.style.left = (rect.width / 2) + 'px';
-    wave.style.top = (rect.height / 2) + 'px';
-    wave.style.animation = 'searchWave 2s ease-out forwards';
-    
-    setTimeout(() => {
-        if (wave.parentNode) {
-            wave.parentNode.removeChild(wave);
-        }
-    }, 2000);
-    
-    return wave;
-}
-
-function createQueryParticle() {
-    const particle = document.createElement('div');
-    particle.style.position = 'absolute';
-    particle.style.borderRadius = '50%';
-    particle.style.pointerEvents = 'none';
-    particle.style.zIndex = '5';
-    
-    const size = 6 + Math.random() * 8;
-    particle.style.width = size + 'px';
-    particle.style.height = size + 'px';
-    particle.style.background = 'radial-gradient(circle, #00ff88 0%, #00d4ff 100%)';
-    particle.style.boxShadow = '0 0 15px #00ff88';
-    
-    const visualization = document.getElementById('vectorVisualization');
-    
-    const x = Math.random() * 450 + 25; // Keep within bounds
-    const y = Math.random() * 450 + 25;
-    
-    particle.style.left = x + 'px';
-    particle.style.top = y + 'px';
-    particle.style.opacity = '1';
-    
-    visualization.appendChild(particle);
-    
-    // Simple movement animation
-    const targetX = 250; // Center
-    const targetY = 250;
-    
-    let startTime = Date.now();
-    const duration = 2000;
-    
-    function animateParticle() {
-        const elapsed = Date.now() - startTime;
-        const progress = Math.min(elapsed / duration, 1);
-        
-        const currentX = x + (targetX - x) * progress;
-        const currentY = y + (targetY - y) * progress;
-        const currentOpacity = 1 - progress;
-        
-        particle.style.left = currentX + 'px';
-        particle.style.top = currentY + 'px';
-        particle.style.opacity = currentOpacity;
-        
-        if (progress < 1) {
-            requestAnimationFrame(animateParticle);
-        } else {
-            if (particle.parentNode) {
-                particle.parentNode.removeChild(particle);
-            }
-        }
-    }
-    
-    requestAnimationFrame(animateParticle);
-}
-
-function highlightMatchedCandidates(results) {
-    console.log('Starting highlighting animation for results:', results);
-    
-    const scatterPlot = document.querySelector('.scatter-plot-3d');
-    if (!scatterPlot) {
-        console.log('No scatter plot found');
-        return;
-    }
-    
-    const candidatePoints = scatterPlot.querySelectorAll('.candidate-point');
-    console.log('Found candidate points:', candidatePoints.length);
-    
-    // Reset all points first
-    candidatePoints.forEach(point => {
-        point.style.background = 'radial-gradient(circle, #4a9eff 0%, #2d5aa0 100%)';
-        point.style.boxShadow = '0 0 10px rgba(74, 158, 255, 0.6)';
-        point.style.transform = 'scale(1)';
-        point.style.animation = '';
-        
-        // Remove existing similarity labels
-        const existingLabel = point.querySelector('.similarity-label');
-        if (existingLabel) {
-            existingLabel.remove();
-        }
-    });
-    
-    // Highlight matched candidates with animations
-    results.forEach((result, index) => {
-        setTimeout(() => {
-            // Find point by candidate ID using attribute selector
-            const matchingPoint = scatterPlot.querySelector(`[data-candidate-id="${result.id}"]`);
-            
-            if (matchingPoint) {
-                const similarity = result.similarity;
-                console.log(`Highlighting candidate ${result.name} (ID: ${result.id}) with similarity ${similarity}`);
-                
-                // Calculate color based on similarity - like TensorFlow Projector
-                let color, glowColor;
-                if (similarity > 0.35) {
-                    color = '#00ff88'; // Bright green for high similarity
-                    glowColor = 'rgba(0, 255, 136, 0.9)';
-                } else if (similarity > 0.25) {
-                    color = '#ffcc00'; // Yellow for medium similarity
-                    glowColor = 'rgba(255, 204, 0, 0.9)';
-                } else {
-                    color = '#ff4757'; // Red for low similarity
-                    glowColor = 'rgba(255, 71, 87, 0.9)';
-                }
-                
-                // Animate the point dramatically
-                matchingPoint.style.transition = 'all 0.8s cubic-bezier(0.175, 0.885, 0.32, 1.275)';
-                matchingPoint.style.background = `radial-gradient(circle, ${color} 0%, ${color}66 100%)`;
-                matchingPoint.style.boxShadow = `
-                    0 0 20px ${glowColor}, 
-                    0 0 40px ${glowColor}, 
-                    0 0 60px ${glowColor}
-                `;
-                matchingPoint.style.transform = `scale(${2.5 + similarity * 2})`;
-                matchingPoint.style.zIndex = '1000';
-                
-                // Add similarity percentage label
-                const label = document.createElement('div');
-                label.className = 'similarity-label';
-                label.textContent = `${Math.round(similarity * 100)}%`;
-                label.style.cssText = `
-                    position: absolute;
-                    top: -35px;
-                    left: 50%;
-                    transform: translateX(-50%);
-                    color: ${color};
-                    font-size: 16px;
-                    font-weight: bold;
-                    text-shadow: 0 0 8px rgba(0,0,0,0.8);
-                    background: rgba(0,0,0,0.7);
-                    padding: 4px 8px;
-                    border-radius: 6px;
-                    border: 2px solid ${color};
-                    z-index: 1001;
-                    animation: fadeInBounce 0.6s ease-out;
-                `;
-                matchingPoint.appendChild(label);
-                
-                // Add continuous pulsing animation
-                matchingPoint.style.animation = 'highlightPulse 1.5s ease-in-out infinite';
-            } else {
-                console.log(`No point found for candidate ID: ${result.id}`);
-            }
-        }, index * 400); // Stagger the highlighting more dramatically
-    });
-}
-
-function createConnectionLine(node) {
-    const line = document.createElement('div');
-    line.className = 'connection-line';
-    
-    const visualization = document.getElementById('vectorVisualization');
-    const rect = visualization.getBoundingClientRect();
-    const nodeRect = node.getBoundingClientRect();
-    
-    const centerX = rect.width / 2;
-    const centerY = rect.height / 2;
-    const nodeX = nodeRect.left - rect.left + nodeRect.width / 2;
-    const nodeY = nodeRect.top - rect.top + nodeRect.height / 2;
-    
-    const length = Math.sqrt(Math.pow(nodeX - centerX, 2) + Math.pow(nodeY - centerY, 2));
-    const angle = Math.atan2(nodeY - centerY, nodeX - centerX) * 180 / Math.PI;
-    
-    line.style.width = length + 'px';
-    line.style.left = centerX + 'px';
-    line.style.top = centerY + 'px';
-    line.style.transform = `rotate(${angle}deg)`;
-    line.style.transformOrigin = '0 50%';
-    
-    setTimeout(() => {
-        if (line.parentNode) {
-            line.parentNode.removeChild(line);
-        }
-    }, 1500);
-    
-    return line;
 }
 
 function displaySearchResults(results) {
