@@ -1,0 +1,28 @@
+# Entorno virtual (NO subir)
+venv/
+
+# Variables de entorno (NO subir)
+.env
+
+# Archivos compilados de Python (NO subir)
+__pycache__/
+*.py[cod]
+*.pyo
+*.pyd
+
+# Archivos temporales, logs y bases de datos (IGNORAR TODO excepto recruitment.db)
+*.log
+*.sqlite3
+
+# Ignorar todo en instance excepto recruitment.db
+instance/*
+!instance/recruitment.db
+
+# Configuraciones de IDEs (NO subir)
+.vscode/
+.idea/
+
+# Archivos de distribución y temporales
+dist/
+build/
+*.egg-info/

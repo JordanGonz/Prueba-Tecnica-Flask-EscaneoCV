@@ -1,5 +1,7 @@
 from datetime import datetime
-from app import db
+from flask_sqlalchemy import SQLAlchemy
+from sqlalchemy.orm import DeclarativeBase
+from extensions import db 
 
 class Candidate(db.Model):
     """Candidate model for storing CV information and extracted data"""
@@ -38,7 +40,6 @@ class Candidate(db.Model):
         return f'<Candidate {self.name}>'
     
     def to_dict(self):
-        """Convert candidate to dictionary for easy JSON serialization"""
         return {
             'id': self.id,
             'name': self.name,
@@ -47,8 +48,12 @@ class Candidate(db.Model):
             'education': self.education,
             'experience': self.experience,
             'skills': self.skills,
+            'languages': self.languages,
+            'certifications': self.certifications,
+            'summary': self.summary,
             'original_filename': self.original_filename,
             'file_type': self.file_type,
             'created_at': self.created_at.isoformat() if self.created_at else None,
             'updated_at': self.updated_at.isoformat() if self.updated_at else None
         }
+

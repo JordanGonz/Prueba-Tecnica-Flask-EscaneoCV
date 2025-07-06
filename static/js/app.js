@@ -603,9 +603,9 @@ window.addEventListener('error', function(event) {
     console.error('JavaScript error:', event.error);
     
     // Don't show error notifications for minor issues
-    if (event.error && event.error.message && !event.error.message.includes('Script error')) {
-        showNotification('An error occurred. Please refresh the page if problems persist.', 'error', 8000);
-    }
+    //if (event.error && event.error.message && !event.error.message.includes('Script error')) {
+   //     showNotification('An error occurred. Please refresh the page if problems persist.', 'error', 8000);
+   // }
 });
 
 // Handle unhandled promise rejections

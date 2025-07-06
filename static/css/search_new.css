@@ -1,0 +1,107 @@
+.bg-gradient-orange {
+    background: linear-gradient(135deg, #ff7e5f, #feb47b) !important;
+    color: white !important;
+    padding: 1rem;
+    font-weight: bold;
+    font-size: 1.1rem;
+}
+
+.bg-gradient-blue {
+    background: linear-gradient(135deg, #2193b0, #6dd5ed) !important;
+    color: white !important;
+    padding: 1rem;
+    font-weight: bold;
+    font-size: 1.1rem;
+}
+
+.bg-gradient-green {
+    background: linear-gradient(135deg, #56ab2f, #a8e063) !important;
+    color: white !important;
+    padding: 1rem;
+    font-weight: bold;
+    font-size: 1.1rem;
+}
+
+.card.candidate-card-gradient {
+    border-radius: 1rem;
+    overflow: hidden;
+    box-shadow: 0 6px 16px rgba(0, 0, 0, 0.15);
+    transition: transform 0.3s ease;
+}
+
+.card.candidate-card-gradient:hover {
+    transform: translateY(-5px);
+}
+
+#vectorVisualization {
+    width: 100%;
+    min-height: 400px; /* antes era height: 400px */
+    max-height: none;
+    overflow-y: auto;  /* para hacer scroll si hay muchas tarjetas */
+    background: linear-gradient(135deg, #0a0a1a 0%, #1a1a3a 50%, #2a1a4a 100%);
+    border-radius: 20px;
+    box-shadow: 0 0 20px rgba(0,0,0,0.3);
+    border: 1px solid #333;
+    padding: 1.5rem;
+    color: #fff;
+    position: relative;
+    margin-top: 1rem;
+    animation: fadeInUp 0.8s ease;
+}
+
+.vector-count {
+    font-size: 1.2rem;
+    font-weight: bold;
+    margin-bottom: 0.8rem;
+    color: #00ffcc;
+}
+
+.search-status {
+    font-size: 1rem;
+    font-style: italic;
+    color: #dddddd;
+}
+
+.scatter-point {
+    width: 8px;
+    height: 8px;
+    background: radial-gradient(circle, #00ffee 0%, #0077ff 100%);
+    border-radius: 50%;
+    position: absolute;
+    box-shadow: 0 0 10px rgba(0, 255, 255, 0.6);
+    z-index: 5;
+    opacity: 0.85;
+    transition: transform 0.3s ease;
+}
+
+.scatter-point:hover {
+    transform: scale(1.5);
+    opacity: 1;
+}
+
+.candidate-card-3d {
+    transition: transform 0.3s ease, box-shadow 0.3s ease;
+}
+.candidate-card-3d:hover {
+    transform: translate(-50%, -50%) scale(1.05);
+    z-index: 10;
+}
+
+.vector-count {
+    position: absolute;
+    top: 1rem;
+    left: 1rem;
+    font-weight: bold;
+    color: #00f5d4;
+    font-size: 1.2rem;
+}
+
+.search-status {
+    position: absolute;
+    top: 2.5rem;
+    left: 1rem;
+    font-style: italic;
+    color: #ccc;
+    font-size: 0.95rem;
+}
+

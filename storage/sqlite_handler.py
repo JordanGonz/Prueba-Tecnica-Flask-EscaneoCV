@@ -1,44 +1,58 @@
 import logging
 from typing import List, Optional
 from sqlalchemy import or_, and_
-from app import db
+from extensions import db
 from models import Candidate
+import re
+from constants.constants import UNIVERSITY_ALIASES
 
 logger = logging.getLogger(__name__)
 
+def extract_keywords(text: str) -> List[str]:
+    """
+    Extrae palabras clave relevantes del texto para búsqueda.
+    Reemplaza alias conocidos (como 'espol') por su forma completa.
+    """
+    common_words = {'dame', 'los', 'las', 'en', 'con', 'de', 'que', 'quiero', 'y', 'para', 'un', 'una', 'me'}
+    words = re.findall(r'\b\w+\b', text.lower())
+
+    # Reemplaza alias por su forma extendida
+    expanded_words = []
+    for w in words:
+        if w not in common_words and len(w) > 2:
+            if w in UNIVERSITY_ALIASES:
+                full_name = UNIVERSITY_ALIASES[w]
+                expanded_words.extend(re.findall(r'\b\w+\b', full_name.lower()))  # divide "Universidad Técnica..." en palabras
+            else:
+                expanded_words.append(w)
+
+    return expanded_words
+
+
 def search_candidates(query: str) -> List[Candidate]:
-    """
-    Search for candidates based on text query.
-    Performs text-based search across multiple fields.
-    
-    Args:
-        query (str): Search query string
-        
-    Returns:
-        List[Candidate]: List of matching candidates
-    """
     try:
         if not query or not query.strip():
             return []
-        
-        search_term = f"%{query.strip()}%"
-        
-        # Search across multiple fields
+
+        keywords = extract_keywords(query)
+
+        # Construye condición AND con ILIKE en education y full_text
+        filters = [
+            and_(*[Candidate.education.ilike(f"%{kw}%") for kw in keywords])
+        ]
+
+        # Si quieres, también puedes buscar en full_text, pero con menos peso
+        filters.append(
+            and_(*[Candidate.full_text.ilike(f"%{kw}%") for kw in keywords])
+        )
+
         candidates = db.session.query(Candidate).filter(
-            or_(
-                Candidate.name.ilike(search_term),
-                Candidate.email.ilike(search_term),
-                Candidate.phone.ilike(search_term),
-                Candidate.skills.ilike(search_term),
-                Candidate.experience.ilike(search_term),
-                Candidate.education.ilike(search_term),
-                Candidate.full_text.ilike(search_term)
-            )
+            or_(*filters)
         ).order_by(Candidate.created_at.desc()).limit(50).all()
-        
-        logger.info(f"Search for '{query}' returned {len(candidates)} candidates")
+
+        logger.info(f"Search for keywords {keywords} returned {len(candidates)} candidates")
         return candidates
-        
+
     except Exception as e:
         logger.error(f"Error searching candidates: {str(e)}")
         raise Exception(f"Database search failed: {str(e)}")

@@ -6,17 +6,22 @@ from io import BytesIO
 from typing import Dict, List, Optional, Any, Union
 from pdf2image import convert_from_path, convert_from_bytes
 from PIL import Image
-from openai import OpenAI
+from openai import OpenAI 
+from dotenv import load_dotenv
 
+load_dotenv()
+
+BASE_DIR = os.path.dirname(os.path.abspath(__file__))
+POPPLER_PATH = os.path.join(BASE_DIR, "..", "poppler", "Library", "bin")
 logger = logging.getLogger(__name__)
 
-# Initialize OpenAI client
-OPENAI_API_KEY = os.environ.get("OPENAI_API_KEY")
+OPENAI_API_KEY = os.getenv("OPENAI_API_KEY") 
+
 if not OPENAI_API_KEY:
     logger.warning("OpenAI API key not found. Vision parsing will be disabled.")
     openai_client = None
 else:
-    openai_client = OpenAI(api_key=OPENAI_API_KEY)
+   openai_client = OpenAI(api_key=OPENAI_API_KEY)
 
 def pdf_to_images(pdf_path: str) -> List[Image.Image]:
     """
@@ -29,7 +34,7 @@ def pdf_to_images(pdf_path: str) -> List[Image.Image]:
         List[Image.Image]: List of PIL images
     """
     try:
-        images = convert_from_path(pdf_path, dpi=200, first_page=1, last_page=3)  # Max 3 pages
+        images = convert_from_path(pdf_path, dpi=200, first_page=1, last_page=3, poppler_path=POPPLER_PATH) # Max 3 pages
         logger.info(f"Converted PDF to {len(images)} images")
         return images
     except Exception as e:
@@ -47,7 +52,7 @@ def pdf_bytes_to_images(pdf_bytes: bytes) -> List[Image.Image]:
         List[Image.Image]: List of PIL images
     """
     try:
-        images = convert_from_bytes(pdf_bytes, dpi=200, first_page=1, last_page=3)  # Max 3 pages
+        images = convert_from_bytes(pdf_bytes, dpi=200, first_page=1, last_page=3, poppler_path=POPPLER_PATH) # Max 3 pages
         logger.info(f"Converted PDF bytes to {len(images)} images")
         return images
     except Exception as e:
@@ -101,7 +106,7 @@ def analyze_cv_with_vision(images: List[Image.Image]) -> Dict:
     try:
         # Convert images to base64
         image_messages = []
-        for i, image in enumerate(images[:2]):  # Analyze max 2 pages
+        for i, image in enumerate(images[:4]):  # Analyze max 2 pages
             base64_image = image_to_base64(image)
             if base64_image:
                 image_messages.append({
@@ -115,39 +120,44 @@ def analyze_cv_with_vision(images: List[Image.Image]) -> Dict:
         
         # Prepare the prompt for CV analysis
         prompt = """
-        Analyze this CV/resume image and extract the following information in JSON format:
-        
+        Extract the following information from this CV/resume image and return it in valid JSON format:
+
         {
-            "name": "Full name of the candidate",
-            "email": "Email address",
-            "phone": "Phone number",
-            "skills": ["list", "of", "technical", "skills"],
-            "experience": [
-                {
-                    "title": "Job title",
-                    "company": "Company name",
-                    "duration": "Duration or dates",
-                    "description": "Brief description of role"
-                }
-            ],
-            "education": [
-                {
-                    "degree": "Degree name",
-                    "institution": "University/School name",
-                    "year": "Graduation year or duration",
-                    "field": "Field of study"
-                }
-            ],
-            "languages": ["list", "of", "languages"],
-            "certifications": ["list", "of", "certifications"],
-            "summary": "Brief professional summary"
+        "name": "Full name of the candidate",
+        "email": "Email address",
+        "phone": "Phone number",
+        "skills": ["list", "of", "technical", "skills"],
+        "experience": [
+            {
+            "title": "Job title",
+            "company": "Company name",
+            "duration": "Duration or dates",
+            "description": "Brief description of role"
+            }
+        ],
+        "education": [
+            {
+            "degree": "Degree name or academic level (e.g. Bachelor, Master, Egresado, Estudiante)",
+            "institution": "Name of the University, College or School",
+            "year": "Year of graduation or range if available",
+            "field": "Field of study (e.g. Ingeniería en Sistemas, Informática, etc.)",
+            "status": "Graduado, Egresado, Estudiante, o vacío si no se menciona"
+            }
+        ],
+        "languages": ["list", "of", "languages"],
+        "certifications": ["list", "of", "certifications"],
+        "summary": "Brief professional summary"
         }
-        
-        Extract as much information as possible. If a field is not available, use an empty string or empty array.
-        Pay special attention to work experience, including job titles, companies, and durations.
-        For skills, include both technical and soft skills mentioned.
-        Ensure the JSON is valid and properly formatted.
+
+        Important considerations:
+        - The candidate might mention education informally (e.g. 'estoy estudiando en...', 'egresado de...') in sections like 'Sobre mí'.
+        - The education section may include both university and high school information. Try to include both when available.
+        - Look for clues like 'Título obtenido:', 'Universidad:', 'Egresado:', 'Estudiante:', 'Licenciatura en...', 'Ingeniero en...', etc.
+        - If multiple degrees are mentioned (e.g., colegio and universidad), list both as separate entries.
+        - Do your best to extract all available details, even if incomplete.
+        - JSON must be valid and structured as described.
         """
+
         
         # Create message with text and images
         content = [{"type": "text", "text": prompt}] + image_messages
@@ -158,7 +168,7 @@ def analyze_cv_with_vision(images: List[Image.Image]) -> Dict:
             model="gpt-4o",  # Latest OpenAI model with vision capabilities
             messages=messages,  # type: ignore
             max_tokens=2000,
-            response_format={"type": "json_object"}
+           response_format={"type": "json_object"}
         )
         
         # Parse response
@@ -197,9 +207,17 @@ def extract_cv_data_with_vision(file_path: str, file_type: str) -> Dict:
             image = Image.open(file_path)
             images = [image]
         elif file_type.lower() == 'docx':
-            # For DOCX, we'll skip vision analysis for now
-            logger.info("DOCX vision analysis not implemented yet")
-            return {}
+            from docx2pdf import convert
+            import tempfile
+            import pythoncom
+            
+            pythoncom.CoInitialize() 
+            with tempfile.TemporaryDirectory() as tmpdirname:
+                temp_pdf = os.path.join(tmpdirname, "converted.pdf")
+                convert(file_path, temp_pdf)
+                images = pdf_to_images(temp_pdf)
+                
+            pythoncom.CoUninitialize()
         
         if not images:
             logger.warning(f"No images generated from {file_type} file")
@@ -214,89 +232,88 @@ def extract_cv_data_with_vision(file_path: str, file_type: str) -> Dict:
         logger.error(f"Error extracting CV data with vision: {str(e)}")
         return {}
 
-def generate_text_embedding(text: str) -> List[float]:
+def generate_text_embedding(text: str, model_name: str = "text-embedding-3-small") -> List[float]:
     """
-    Generate embedding for text using OpenAI.
+    Generate embedding for a given text using OpenAI Embedding API.
     
     Args:
-        text (str): Text to embed
+        text (str): Input text to embed (up to 8000 tokens).
+        model_name (str): Name of the embedding model to use.
         
     Returns:
-        List[float]: Embedding vector
+        List[float]: Embedding vector (1536 dimensions for text-embedding-3-small)
     """
     if not openai_client:
         logger.warning("OpenAI client not available. Skipping embedding generation.")
-        return []
+        return [0.0] * 1536
     
     try:
-        # Add timeout and retry logic for OpenAI API
+        cleaned_text = text.strip().replace("\n", " ")[:8000]
+        if not cleaned_text:
+            return [0.0] * 1536
+
         response = openai_client.embeddings.create(
-            model="text-embedding-3-small",
-            input=text[:8000],  # Limit text length to avoid token limits
-            encoding_format="float",
-            timeout=30  # Add timeout
+            model=model_name,
+            input=[cleaned_text]
         )
         
         embedding = response.data[0].embedding
-        logger.info(f"Generated embedding with {len(embedding)} dimensions")
-        
+        logger.info(f"Generated embedding ({len(embedding)} dims) for text: {cleaned_text[:60]}...")
         return embedding
-        
+
     except Exception as e:
-        logger.error(f"Error generating embedding: {str(e)}")
-        # Return a zero vector of correct dimensions instead of empty list
+        logger.error(f"OpenAI embedding error: {str(e)}")
         return [0.0] * 1536
 
-def search_candidates_semantic(query: str, candidate_embeddings: List[Dict], top_k: int = 10) -> List[Dict]:
+
+def search_candidates_semantic(query: str, candidate_embeddings: List[Dict], top_k: int = 10, similarity_threshold: float = 0.6) -> List[Dict]:
     """
-    Perform semantic search using embeddings.
-    
+    Perform semantic search using embeddings and filter by similarity threshold.
+
     Args:
         query (str): Search query
         candidate_embeddings (List[Dict]): List of candidates with embeddings
-        top_k (int): Number of top results to return
-        
+        top_k (int): Max results to return
+        similarity_threshold (float): Minimum similarity to consider a match
+
     Returns:
-        List[Dict]: Ranked search results
+        List[Dict]: Top matching candidates with similarity >= threshold
     """
     if not openai_client:
         logger.warning("OpenAI client not available. Skipping semantic search.")
         return []
-    
+
     try:
-        # Generate embedding for query
         query_embedding = generate_text_embedding(query)
         if not query_embedding:
             return []
-        
-        # Calculate similarity scores
+
         results = []
         for candidate in candidate_embeddings:
-            if 'embedding' not in candidate or not candidate['embedding']:
+            emb = candidate.get('embedding', [])
+            if not emb:
                 continue
-            
-            # Calculate cosine similarity
-            similarity = cosine_similarity(query_embedding, candidate['embedding'])
-            results.append({
-                'candidate': candidate,
-                'similarity': similarity
-            })
-        
-        # Sort by similarity and return top k
+
+            sim = cosine_similarity(query_embedding, emb)
+            if sim >= similarity_threshold:  # ← AQUI EL FILTRO
+                results.append({
+                    'candidate': candidate,
+                    'similarity': sim
+                })
+
         results.sort(key=lambda x: x['similarity'], reverse=True)
-        
-        # Return candidates with similarity scores
         top_results = []
         for r in results[:top_k]:
             candidate = r['candidate'].copy()
-            candidate['similarity'] = r['similarity']
+            candidate['similarity'] = round(r['similarity'], 4)
             top_results.append(candidate)
-        
+
         return top_results
-        
+
     except Exception as e:
         logger.error(f"Error in semantic search: {str(e)}")
         return []
+
 
 def cosine_similarity(vec1: List[float], vec2: List[float]) -> float:
     """
@@ -328,3 +345,67 @@ def cosine_similarity(vec1: List[float], vec2: List[float]) -> float:
     except Exception as e:
         logger.error(f"Error calculating cosine similarity: {str(e)}")
         return 0.0
+    
+def analyze_text_with_openai(text: str) -> Dict:
+    """
+    Analiza texto plano de CV (.docx o .txt) con GPT-4o y devuelve un JSON estructurado robusto.
+    """
+    if not openai_client:
+        logger.warning("OpenAI client not available.")
+        return {}
+
+    try:
+        prompt = f"""
+Eres un experto en análisis de hojas de vida. A partir del siguiente texto extrae la información estructurada en formato JSON.
+Detecta las secciones aunque estén nombradas diferente o con estilos desordenados (como EDUCACIÓN, Formación Académica, Estudios, etc).
+Si un dato no está presente, usa una cadena vacía o una lista vacía. Mantén el formato, no expliques nada, solo devuelve el JSON.
+
+Ejemplo de salida:
+{{
+  "name": "Nombre completo",
+  "email": "Correo electrónico",
+  "phone": "Número de teléfono",
+  "skills": ["Habilidad1", "Habilidad2"],
+  "experience": [
+    {{
+      "title": "Cargo o Rol",
+      "company": "Nombre de la empresa",
+      "duration": "Año o periodo"
+    }}
+  ],
+  "education": [
+    {{
+      "degree": "Nombre del título o grado",
+      "institution": "Nombre de la institución",
+      "year": "Año si está disponible"
+    }}
+  ],
+  "languages": ["Idioma1", "Idioma2"],
+  "certifications": ["Certificación1", "Certificación2"],
+  "summary": "Resumen profesional o perfil si existe"
+}}
+
+Texto del CV:
+{text[:12000]}  <!-- GPT-4o permite hasta 128k tokens, usamos 12k para evitar cortes. -->
+"""
+
+        response = openai_client.chat.completions.create(
+            model="gpt-4o",
+            messages=[{"role": "user", "content": prompt}],
+            max_tokens=2000,
+            temperature=0.3,
+        )
+
+        result = response.choices[0].message.content.strip()
+
+        # Validación robusta del JSON devuelto
+        try:
+            data = json.loads(result)
+            return data
+        except json.JSONDecodeError as json_err:
+            logger.error(f"Respuesta malformada del modelo: {result}")
+            return {}
+
+    except Exception as e:
+        logger.error(f"Error al analizar texto plano: {str(e)}")
+        return {}

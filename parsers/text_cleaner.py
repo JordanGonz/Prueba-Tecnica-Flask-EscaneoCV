@@ -45,27 +45,53 @@ def clean_and_extract_info(text: str) -> Dict:
 
 def clean_text(text: str) -> str:
     """
-    Clean and normalize text content.
-    
+    Clean and normalize text content, reintroduce section-based newlines.
+
     Args:
         text (str): Raw text content
-        
+
     Returns:
-        str: Cleaned text
+        str: Cleaned and structured text
     """
     if not text:
         return ""
-    
-    # Remove excessive whitespace
+
+    # Forzar saltos de línea antes de encabezados comunes de CV
+    section_keywords = [
+        r"(información personal|educación|educacion|formación|experience|experiencia|work experience|habilidades|skills|competencias|certificaciones?|summary|resumen|idiomas|languages)"
+    ]
+    for pattern in section_keywords:
+        text = re.sub(pattern, r'\n\1', text, flags=re.IGNORECASE)
+
+    # Forzar salto de línea antes de frases clave
+    line_split_clues = [
+        r"(universidad[\w\s]*:?)",
+        r"(colegio[\w\s]*:?)",
+        r"(unidad educativa[\w\s]*:?)",
+        r"(título[\w\s]*:?)",
+        r"(licenciatura[\w\s]*:?)",
+        r"(ingeniero[\w\s]*:?)",
+        r"(egresado[\w\s]*\.?)",
+        r"(estudiante[\w\s]*\.?)"
+    ]
+    for pattern in line_split_clues:
+        text = re.sub(pattern, r'\n\1', text, flags=re.IGNORECASE)
+
+    # Limpiar caracteres especiales pero mantener puntuaciones útiles
+    text = re.sub(r'[^\w\s@.,:+()\-]', ' ', text)
+
+    # Reconvertir múltiples espacios
     text = re.sub(r'\s+', ' ', text)
-    
-    # Remove special characters but keep basic punctuation
-    text = re.sub(r'[^\w\s@.,()+-]', ' ', text)
-    
-    # Clean up multiple spaces
-    text = re.sub(r'\s+', ' ', text)
-    
+
+    # Restaurar saltos de línea donde correspondan
+    text = re.sub(r'(?<=[a-zA-Z0-9])\n(?=[a-zA-Z])', r'\n', text)
+
+    # Añadir salto real tras puntos seguidos de mayúsculas
+    text = re.sub(r'\.\s+(?=[A-ZÁÉÍÓÚÑ])', '.\n', text)
+
     return text.strip()
+
+
 
 def extract_name(text: str) -> str:
     """
@@ -164,57 +190,83 @@ def extract_phone(text: str) -> str:
 def extract_education(text: str) -> str:
     """
     Extract education information from CV text.
-    
-    Args:
-        text (str): CV text content
-        
     Returns:
         str: JSON string of education information
     """
     try:
         education_info = []
-        
-        # Look for education keywords
-        education_keywords = [
-            'education', 'qualification', 'degree', 'university', 'college',
-            'bachelor', 'master', 'phd', 'diploma', 'certificate'
-        ]
-        
-        lines = text.lower().split('\n')
-        education_section = False
-        
-        for i, line in enumerate(lines):
-            # Check if we're in education section
-            if any(keyword in line for keyword in education_keywords):
-                education_section = True
-                continue
-            
-            # Stop if we hit another major section
-            if education_section and any(word in line for word in ['experience', 'work', 'employment', 'skills']):
-                break
-            
-            # Extract education entries
-            if education_section and line.strip():
-                # Look for degree patterns
-                degree_patterns = [
-                    r'(bachelor|master|phd|diploma|certificate).*?(?:in|of)?\s+([a-zA-Z\s]+)',
-                    r'(b\.?[as]\.?|m\.?[as]\.?|ph\.?d\.?).*?([a-zA-Z\s]+)',
-                ]
-                
-                for pattern in degree_patterns:
-                    match = re.search(pattern, line)
-                    if match:
-                        education_info.append({
-                            'degree': match.group(1),
-                            'field': match.group(2).strip(),
-                            'details': line.strip()
-                        })
-        
-        return json.dumps(education_info) if education_info else ''
-        
+
+        raw_lines = text.split('\n')
+        lines = [line.strip() for line in raw_lines if line.strip()]
+        lines_lower = [line.lower() for line in lines]
+
+        # Palabras clave para identificar instituciones educativas
+        education_keywords = ['universidad', 'instituto', 'colegio', 'unidad educativa', 'escuela', 'school', 'college']
+        degree_keywords = ['ingeniero', 'licenciatura', 'bachiller', 'doctorado', 'técnico', 'magister', 'título']
+        date_pattern = re.compile(r'\b(19|20)\d{2}\s*[-–]\s*(19|20)\d{2}\b')  # ej: 2013 – 2019
+
+        i = 0
+        while i < len(lines):
+            line = lines[i]
+            line_lower = lines_lower[i]
+
+            # Si contiene fecha y palabras clave educativas o de grados, capturamos el bloque
+            if date_pattern.search(line) or any(k in line_lower for k in education_keywords + degree_keywords):
+                block = [line]
+
+                # Tomar hasta 2 líneas siguientes si parecen ser continuación
+                for j in range(1, 3):
+                    if i + j < len(lines):
+                        next_line = lines[i + j].strip()
+                        if next_line and not re.match(r'^[A-Z\s]{3,}$', next_line):  # evita secciones
+                            block.append(next_line)
+
+                full_text = ' '.join(block)
+
+                # Intentar extraer institución
+                institution = ""
+                for kw in education_keywords:
+                    # Permite palabras hasta el fin de línea, incluyendo nombres con comillas, puntos y múltiples palabras
+                    matches = re.findall(rf'({kw}[^\n]*)', full_text, re.IGNORECASE)
+                    if matches:
+                        # Elegimos la coincidencia más larga
+                        institution = max(matches, key=len).strip()
+                        break
+
+                # Intentar extraer grado y campo
+                degree_match = re.search(
+                    r'(ingeniero|licenciatura|bachiller|técnico|tecnólogo|doctorado|magister)\s*(en|de)?\s*([a-zA-ZÁÉÍÓÚñÑ\s\-]+)?',
+                    full_text, re.IGNORECASE
+                )
+                degree = field = ""
+                if degree_match:
+                    degree = degree_match.group(1).strip().title()
+                    field = degree_match.group(3).strip().title() if degree_match.group(3) else ""
+
+                # Estado (opcional)
+                status = ""
+                if "egresado" in full_text.lower():
+                    status = "Egresado"
+                elif "estudiante" in full_text.lower():
+                    status = "Estudiante"
+
+                if institution or degree:
+                    education_info.append({
+                        'degree': degree,
+                        'field': field,
+                        'institution': institution,
+                        'status': status,
+                        'details': full_text
+                    })
+
+                i += len(block)  # saltar las líneas que ya analizamos
+                i += 1
+
+        return json.dumps(education_info, ensure_ascii=False) if education_info else ''
     except Exception as e:
         logger.warning(f"Error extracting education: {str(e)}")
         return ''
+
 
 def extract_experience(text: str) -> str:
     """
@@ -261,12 +313,12 @@ def extract_experience(text: str) -> str:
                 continue
             
             # Check if we're entering experience section
-            if any(keyword in line_lower for keyword in experience_keywords):
+            if any(keyword in line_lower for keyword in experience_keywords + ['cargo']):
                 experience_section = True
                 continue
             
             # Stop if we hit education or skills section
-            if experience_section and any(word in line_lower for word in ['education', 'educación', 'formación', 'skills', 'habilidades', 'competencias']):
+            if experience_section and any(word in line_lower for word in ['education', 'educación', 'formación', 'skills', 'habilidades', 'competencias', 'idiomas']):
                 if current_experience:
                     experience_info.append(current_experience)
                 break
@@ -359,66 +411,84 @@ def extract_experience(text: str) -> str:
         logger.warning(f"Error extracting experience: {str(e)}")
         return ''
 
+
 def extract_skills(text: str) -> str:
     """
-    Extract skills from CV text.
-    
+    Extract skills from CV text (técnicas y blandas).
+
     Args:
         text (str): CV text content
-        
+
     Returns:
         str: JSON string of skills information
     """
     try:
         skills = []
-        
-        # Common technical skills patterns
-        tech_skills_patterns = [
-            r'\b(python|java|javascript|c\+\+|c#|php|ruby|go|rust|swift|kotlin)\b',
-            r'\b(react|angular|vue|node\.?js|express|django|flask|spring)\b',
-            r'\b(mysql|postgresql|mongodb|redis|elasticsearch)\b',
-            r'\b(aws|azure|gcp|docker|kubernetes|jenkins)\b',
-            r'\b(git|github|gitlab|bitbucket)\b',
-            r'\b(html|css|sass|less|bootstrap|tailwind)\b'
-        ]
-        
+
+        # Preprocesamiento básico
         text_lower = text.lower()
-        
-        # Extract technical skills
+        lines = text.split('\n')
+
+        # 1. Extraer patrones técnicos frecuentes
+        tech_skills_patterns = [
+            r'\b(python|java|javascript|typescript|c\+\+|c#|php|ruby|go|rust|swift|kotlin)\b',
+            r'\b(react|angular|vue|node\.?js|express|django|flask|springboot?)\b',
+            r'\b(mysql|postgresql|sql server|mongodb|oracle 11g?|redis|elasticsearch)\b',
+            r'\b(aws|azure|gcp|docker|kubernetes|jenkins|github actions?)\b',
+            r'\b(git|github|gitlab|bitbucket)\b',
+            r'\b(html|css|sass|less|bootstrap|tailwindcss?)\b',
+            r'\b(powerbi|tableau|jira|postman|soapui|databricks|netbeans|android studio)\b',
+            r'\b(etl|jwt|mvc|iis|gnu/linux|sencha js|laravel|\.net\s*6?|c\.net|mantenimiento técnico|microsoft office)\b'
+        ]
+
         for pattern in tech_skills_patterns:
             matches = re.findall(pattern, text_lower, re.IGNORECASE)
             skills.extend(matches)
-        
-        # Look for skills section
-        lines = text.split('\n')
-        skills_section = False
-        
+
+        # 2. Extraer frases tipo: "uso de", "manejo de"
+        phrase_based_patterns = [
+            r'(?:uso de|manejo de|experiencia en|conocimiento en)\s+([a-zA-Z\s\.\-]{2,60})'
+        ]
+        for pattern in phrase_based_patterns:
+            matches = re.findall(pattern, text_lower)
+            for phrase in matches:
+                parts = re.split(r'\s+y\s+|,|;|•|·', phrase)
+                skills.extend([p.strip() for p in parts if p.strip()])
+
+        # 3. Buscar sección de habilidades explícita
+        section_headers = ['conocimientos técnicos', 'habilidades', 'skills', 'competencias']
+        collecting = False
+
         for line in lines:
-            line_lower = line.lower()
-            
-            # Check if we're in skills section
-            if any(keyword in line_lower for keyword in ['skills', 'technologies', 'competencies']):
-                skills_section = True
+            line_lower = line.lower().strip()
+
+            # Detectar encabezado
+            if any(header in line_lower for header in section_headers):
+                collecting = True
                 continue
-            
-            # Stop if we hit another major section
-            if skills_section and any(word in line_lower for word in ['experience', 'education', 'work']):
+
+            # Detener si aparece otra sección
+            if collecting and any(stop in line_lower for stop in ['experiencia', 'proyecto', 'educación', 'formación', 'referencias']):
                 break
-            
-            # Extract skills from skills section
-            if skills_section and line.strip():
-                # Split by common delimiters
-                line_skills = re.split(r'[,;|•·]', line)
-                for skill in line_skills:
-                    skill = skill.strip()
+
+            # Procesar líneas de habilidades en columnas
+            if collecting and line.strip():
+                # Separar por espacios amplios, tabs o bullets
+                items = re.split(r'\s{2,}|\t|[,;•·]', line)
+                for item in items:
+                    skill = item.strip()
                     if skill and len(skill) > 1:
                         skills.append(skill)
-        
-        # Remove duplicates and clean
-        unique_skills = list(set([skill.strip().title() for skill in skills if skill.strip()]))
-        
-        return json.dumps(unique_skills) if unique_skills else ''
-        
+
+        # 4. Limpiar y unificar
+        unique_skills = sorted(set(
+            s.strip().title()
+            for s in skills
+            if s and len(s.strip()) >= 2
+        ))
+
+        return json.dumps(unique_skills, ensure_ascii=False) if unique_skills else ''
+
     except Exception as e:
         logger.warning(f"Error extracting skills: {str(e)}")
         return ''

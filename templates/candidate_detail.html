@@ -1,6 +1,6 @@
 {% extends "base.html" %}
 
-{% block title %}{{ candidate.name }} - Candidate Details - AI Recruitment System{% endblock %}
+{% block title %}{{ candidate.name }} - Datos del candidato - AI Recruitment System{% endblock %}
 
 {% block content %}
 <div class="row">
@@ -13,16 +13,16 @@
                 </h1>
                 <p class="text-muted mb-0">
                     <i class="fas fa-calendar me-2"></i>
-                    Added on {{ candidate.created_at.strftime('%B %d, %Y at %H:%M') if candidate.created_at else 'Unknown date' }}
+                      Añadido el {{ candidate.created_at.strftime('%B %d, %Y a las %H:%M') if candidate.created_at else 'Unknown date' }}
                 </p>
             </div>
             <div>
-                <a href="{{ url_for('candidates') }}" class="btn btn-outline-secondary me-2">
-                    <i class="fas fa-arrow-left me-2"></i>Back to Candidates
+                <a href="{{ url_for('routes.candidates') }}" class="btn btn-outline-secondary me-2">
+                    <i class="fas fa-arrow-left me-2"></i>Volver a Candidatos
                 </a>
                 {% if candidate.email %}
                     <a href="mailto:{{ candidate.email }}" class="btn btn-primary">
-                        <i class="fas fa-envelope me-2"></i>Send Email
+                        <i class="fas fa-envelope me-2"></i>Enviar correo
                     </a>
                 {% endif %}
             </div>
@@ -37,7 +37,7 @@
             <div class="card-header">
                 <h5 class="card-title mb-0">
                     <i class="fas fa-user-circle me-2"></i>
-                    Contact Information
+                    Información de contacto
                 </h5>
             </div>
             <div class="card-body">
@@ -70,7 +70,7 @@
                     {% endif %}
                     
                     {% if not candidate.email and not candidate.phone %}
-                        <p class="text-muted">No contact information available</p>
+                        <p class="text-muted">No hay información de contacto disponible</p>
                     {% endif %}
                 </div>
             </div>
@@ -81,13 +81,13 @@
             <div class="card-header">
                 <h6 class="card-title mb-0">
                     <i class="fas fa-file-alt me-2"></i>
-                    File Information
+                    Información de archivo
                 </h6>
             </div>
             <div class="card-body">
                 <div class="row">
                     <div class="col-6">
-                        <small class="text-muted">File Type</small>
+                        <small class="text-muted">Tipo de archivo</small>
                         <div>
                             <span class="badge bg-info text-uppercase">
                                 {{ candidate.file_type }}
@@ -95,7 +95,7 @@
                         </div>
                     </div>
                     <div class="col-6">
-                        <small class="text-muted">Original Name</small>
+                        <small class="text-muted">Nombre original</small>
                         <div class="small">
                             {{ candidate.original_filename if candidate.original_filename else 'Unknown' }}
                         </div>
@@ -103,7 +103,7 @@
                 </div>
                 <hr>
                 <div>
-                    <small class="text-muted">Processing Date</small>
+                    <small class="text-muted">Fecha de procesamiento</small>
                     <div class="small">
                         {{ candidate.created_at.strftime('%Y-%m-%d %H:%M') if candidate.created_at else 'Unknown' }}
                     </div>
@@ -118,7 +118,7 @@
             <div class="card-header">
                 <h5 class="card-title mb-0">
                     <i class="fas fa-cogs me-2"></i>
-                    Skills & Technologies
+                    Skills & Tecnologias
                 </h5>
             </div>
             <div class="card-body">
@@ -131,10 +131,10 @@
                             {% endfor %}
                         </div>
                     {% else %}
-                        <p class="text-muted mb-0">No skills information available</p>
+                        <p class="text-muted mb-0">No se dispone de información sobre Skill</p>
                     {% endif %}
                 {% else %}
-                    <p class="text-muted mb-0">No skills information available</p>
+                    <p class="text-muted mb-0">No se dispone de información sobre Skill</p>
                 {% endif %}
             </div>
         </div>
@@ -144,7 +144,7 @@
             <div class="card-header">
                 <h5 class="card-title mb-0">
                     <i class="fas fa-briefcase me-2"></i>
-                    Work Experience
+                    Experiencia laboral
                 </h5>
             </div>
             <div class="card-body">
@@ -165,7 +165,7 @@
                                 </div>
                             {% endfor %}
                         {% else %}
-                            <p class="text-muted mb-0">No work experience information available</p>
+                            <p class="text-muted mb-0">No se dispone de información sobre la experiencia laboral</p>
                         {% endif %}
                     {% else %}
                         <div class="border-start border-primary ps-3">
@@ -173,7 +173,7 @@
                         </div>
                     {% endif %}
                 {% else %}
-                    <p class="text-muted mb-0">No work experience information available</p>
+                    <p class="text-muted mb-0">No se dispone de información sobre la experiencia laboral</p>
                 {% endif %}
             </div>
         </div>
@@ -183,7 +183,7 @@
             <div class="card-header">
                 <h5 class="card-title mb-0">
                     <i class="fas fa-graduation-cap me-2"></i>
-                    Education
+                    Educación
                 </h5>
             </div>
             <div class="card-body">
@@ -204,7 +204,7 @@
                                 </div>
                             {% endfor %}
                         {% else %}
-                            <p class="text-muted mb-0">No education information available</p>
+                            <p class="text-muted mb-0">No se dispone de información sobre educación</p>
                         {% endif %}
                     {% else %}
                         <div class="border-start border-success ps-3">
@@ -212,7 +212,7 @@
                         </div>
                     {% endif %}
                 {% else %}
-                    <p class="text-muted mb-0">No education information available</p>
+                    <p class="text-muted mb-0">No se dispone de información sobre educación</p>
                 {% endif %}
             </div>
         </div>
@@ -226,10 +226,10 @@
             <div class="card-header d-flex justify-content-between align-items-center">
                 <h5 class="card-title mb-0">
                     <i class="fas fa-file-text me-2"></i>
-                    Complete CV Content
+                    Contenido completo del CV
                 </h5>
                 <button type="button" class="btn btn-sm btn-outline-secondary" onclick="copyToClipboard(document.getElementById('fullText').textContent)">
-                    <i class="fas fa-copy me-1"></i>Copy
+                    <i class="fas fa-copy me-1"></i>Copiar
                 </button>
             </div>
             <div class="card-body">

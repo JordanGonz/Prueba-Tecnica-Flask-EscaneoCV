@@ -1,0 +1,52 @@
+/* General Styles */
+.custom-card {
+    border-radius: 12px;
+    transition: transform 0.3s ease, box-shadow 0.3s ease;
+}
+
+.custom-card:hover {
+    transform: translateY(-10px);
+    box-shadow: 0 10px 30px rgba(0, 0, 0, 0.1);
+}
+
+/* Card Body */
+.custom-card .card-body {
+    padding: 20px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    border-radius: 12px;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+}
+
+/* Icon */
+.custom-card .card-body i {
+    font-size: 2rem;
+}
+
+/* Text inside cards */
+.custom-card .card-body h3 {
+    font-size: 2.5rem;
+    margin-bottom: 0.5rem;
+    font-weight: bold;
+}
+
+.custom-card .card-body p {
+    font-size: 1.1rem;
+    margin: 0;
+    text-transform: uppercase;
+    font-weight: 500;
+}
+
+/* Card Colors */
+.bg-primary {
+    background-color: #007bff !important;
+}
+
+.bg-success {
+    background-color: #28a745 !important;
+}
+
+.bg-info {
+    background-color: #17a2b8 !important;
+}

@@ -1,0 +1,104 @@
+/* Estilo para la cabecera de la tabla */
+.table thead th {
+    background: linear-gradient(135deg, #1e3c72, #2a5298);
+    color: white;
+    font-weight: 600;
+    vertical-align: middle;
+    border: none;
+}
+
+/* Hover sobre las filas */
+.table-hover tbody tr:hover {
+    background-color: #f1f5f9;
+    transition: background-color 0.3s ease;
+}
+
+/* Celdas centradas verticalmente */
+.table td, .table th {
+    vertical-align: middle;
+    border-color: #dee2e6;
+}
+
+/* Avatar con sombra y degradado */
+.table .bg-primary.rounded-circle {
+    background: linear-gradient(135deg, #007bff, #00c6ff);
+    box-shadow: 0 4px 8px rgba(0,0,0,0.1);
+}
+
+/* Estilo de habilidades */
+.skills-container .badge {
+    background-color: #6c757d;
+    color: #fff;
+    font-size: 0.75rem;
+    margin-right: 0.25rem;
+    border-radius: 10px;
+}
+
+/* Badge extra habilidades */
+.badge.bg-light.text-dark {
+    background-color: #f8f9fa !important;
+    color: #343a40 !important;
+}
+
+/* Botón del menú de acciones */
+.table .dropdown-toggle {
+    border-radius: 10px;
+}
+
+/* Botón de acciones */
+.table .btn-outline-primary {
+    border-color: #007bff;
+}
+
+/* Tipo de archivo */
+.table .badge.bg-info {
+    background: #0dcaf0;
+}
+
+/* Ícono de cabecera */
+.table .card-title i {
+    color: #1e3c72;
+}
+
+/* Contenedor de la tabla */
+.table-container {
+    border-radius: 1rem;
+    overflow: hidden;
+    box-shadow: 0 0 20px rgba(0,0,0,0.1);
+}
+
+.icon-box {
+    width: 60px;
+    height: 60px;
+    border-radius: 15px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    margin: 0 auto;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
+}
+
+.bg-gradient-blue {
+    background: linear-gradient(135deg, #1e3c72, #2a5298);
+}
+
+.bg-gradient-red {
+    background: linear-gradient(135deg, #ff416c, #ff4b2b);
+}
+
+.bg-gradient-green {
+    background: linear-gradient(135deg, #11998e, #38ef7d);
+}
+
+.bg-gradient-indigo {
+    background: linear-gradient(135deg, #4e54c8, #8f94fb);
+}
+
+.summary-card h4 {
+    font-size: 1.75rem;
+    margin-top: 0.5rem;
+}
+
+.summary-card p {
+    margin: 0;
+}

@@ -1,88 +1,72 @@
 <!DOCTYPE html>
-<html lang="en" data-bs-theme="dark">
+<html lang="en">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>{% block title %}AI Recruitment System{% endblock %}</title>
-    
-    <!-- Bootstrap CSS -->
-    <link href="https://cdn.replit.com/agent/bootstrap-agent-dark-theme.min.css" rel="stylesheet">
-    
+
+    <!-- Bootstrap (modo claro) -->
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+
     <!-- Font Awesome Icons -->
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
-    
-    <!-- Custom CSS -->
     <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
-    
-    {% block extra_head %}{% endblock %}
+    {% block extra_css %}{% endblock %}
+
 </head>
 <body>
-    <!-- Navigation -->
-    <nav class="navbar navbar-expand-lg navbar-dark bg-dark border-bottom">
+    <!-- Navbar -->
+    <nav class="navbar navbar-expand-lg bg-white shadow-sm sticky-top elegant-navbar">
         <div class="container">
-            <a class="navbar-brand" href="{{ url_for('index') }}">
-                <i class="fas fa-users me-2"></i>
-                AI Recruitment System
+            <a class="navbar-brand text-primary fw-semibold d-flex align-items-center" href="{{ url_for('routes.index') }}">
+                 <strong>AI</strong>  Recruitment System
             </a>
-            
+    
             <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav">
                 <span class="navbar-toggler-icon"></span>
             </button>
-            
+    
             <div class="collapse navbar-collapse" id="navbarNav">
-                <ul class="navbar-nav me-auto">
+                <!-- Left-aligned: Main nav -->
+                <ul class="navbar-nav me-auto align-items-center">
                     <li class="nav-item">
-                        <a class="nav-link {% if request.endpoint == 'index' %}active{% endif %}" 
-                           href="{{ url_for('index') }}">
-                            <i class="fas fa-home me-1"></i>Dashboard
+                        <a class="nav-link {% if request.endpoint == 'routes.index' %}active{% endif %}" href="{{ url_for('routes.index') }}">
+                            <i class="fas fa-home me-1"></i> Dashboard
                         </a>
                     </li>
                     <li class="nav-item">
-                        <a class="nav-link {% if request.endpoint == 'upload_cv' %}active{% endif %}" 
-                           href="{{ url_for('upload_cv') }}">
-                            <i class="fas fa-upload me-1"></i>Upload CV
+                        <a class="nav-link {% if request.endpoint == 'routes.upload_cv' %}active{% endif %}" href="{{ url_for('routes.upload_cv') }}">
+                            <i class="fas fa-upload me-1"></i> Cargar CV
                         </a>
                     </li>
                     <li class="nav-item">
-                        <a class="nav-link {% if request.endpoint == 'search' %}active{% endif %}" 
-                           href="{{ url_for('search') }}">
-                            <i class="fas fa-search me-1"></i>Search
-                        </a>
-                    </li>
-                    <li class="nav-item">
-                        <a class="nav-link {% if request.endpoint == 'candidates' %}active{% endif %}" 
-                           href="{{ url_for('candidates') }}">
-                            <i class="fas fa-users me-1"></i>All Candidates
+                        <a class="nav-link {% if request.endpoint == 'routes.candidates' %}active{% endif %}" href="{{ url_for('routes.candidates') }}">
+                            <i class="fas fa-users me-1"></i> Todos los Candidatos
                         </a>
                     </li>
                 </ul>
-                
-                <ul class="navbar-nav">
+    
+                <!-- Right-aligned: Search -->
+                <ul class="navbar-nav ms-auto align-items-center">
                     <li class="nav-item">
-                        <a class="nav-link" href="{{ url_for('healthcheck') }}" target="_blank">
-                            <i class="fas fa-heartbeat me-1"></i>Health Check
+                        <a class="nav-link {% if request.endpoint == 'routes.search' %}active{% endif %}" href="{{ url_for('routes.search') }}">
+                            <i class="fas fa-search me-1"></i> Buscar
                         </a>
                     </li>
                 </ul>
             </div>
         </div>
     </nav>
+    
+
 
     <!-- Flash Messages -->
     {% with messages = get_flashed_messages(with_categories=true) %}
         {% if messages %}
             <div class="container mt-3">
                 {% for category, message in messages %}
-                    <div class="alert alert-{{ 'danger' if category == 'error' else category }} alert-dismissible fade show">
-                        {% if category == 'error' %}
-                            <i class="fas fa-exclamation-triangle me-2"></i>
-                        {% elif category == 'success' %}
-                            <i class="fas fa-check-circle me-2"></i>
-                        {% elif category == 'info' %}
-                            <i class="fas fa-info-circle me-2"></i>
-                        {% elif category == 'warning' %}
-                            <i class="fas fa-exclamation-circle me-2"></i>
-                        {% endif %}
+                    <div class="alert alert-{{ 'danger' if category == 'error' else category }} alert-dismissible fade show" role="alert">
+                        <i class="fas fa-{{ 'exclamation-triangle' if category == 'error' else 'check-circle' if category == 'success' else 'info-circle' }} me-2"></i>
                         {{ message }}
                         <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
                     </div>
@@ -92,35 +76,18 @@
     {% endwith %}
 
     <!-- Main Content -->
-    <main class="container my-4">
+    <main class="container my-5">
         {% block content %}{% endblock %}
     </main>
 
     <!-- Footer -->
-    <footer class="bg-dark text-light py-4 mt-5">
-        <div class="container">
-            <div class="row">
-                <div class="col-md-6">
-                    <h5>AI Recruitment System</h5>
-                    <p class="mb-0">Streamlining candidate management with intelligent CV processing.</p>
-                </div>
-                <div class="col-md-6 text-md-end">
-                    <p class="mb-0">
-                        <i class="fas fa-code me-1"></i>
-                        Built with Flask & Bootstrap
-                    </p>
-                    <small class="text-muted">Version 1.0.0</small>
-                </div>
-            </div>
-        </div>
-    </footer>
 
     <!-- Bootstrap JS -->
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
-    
-    <!-- Custom JavaScript -->
+
+    <!-- Custom JS -->
     <script src="{{ url_for('static', filename='js/app.js') }}"></script>
-    
+
     {% block extra_scripts %}{% endblock %}
 </body>
 </html>
