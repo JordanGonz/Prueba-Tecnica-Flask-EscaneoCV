@@ -200,6 +200,13 @@ def extract_education(text: str) -> str:
         lines = [line.strip() for line in raw_lines if line.strip()]
         lines_lower = [line.lower() for line in lines]
 
+        # Detectar si hay línea explícita con "Universidad: ..."
+        explicit_institution = ""
+        for line in lines:
+            if re.match(r'^universidad\s*:', line.lower()):
+                explicit_institution = line.split(':', 1)[1].strip()
+                break
+
         # Palabras clave para identificar instituciones educativas
         education_keywords = ['universidad', 'instituto', 'colegio', 'unidad educativa', 'escuela', 'school', 'college']
         degree_keywords = ['ingeniero', 'licenciatura', 'bachiller', 'doctorado', 'técnico', 'magister', 'título']
@@ -210,7 +217,7 @@ def extract_education(text: str) -> str:
             line = lines[i]
             line_lower = lines_lower[i]
 
-            # Si contiene fecha y palabras clave educativas o de grados, capturamos el bloque
+            # Si contiene fecha o palabras clave, es un bloque de educación
             if date_pattern.search(line) or any(k in line_lower for k in education_keywords + degree_keywords):
                 block = [line]
 
@@ -223,17 +230,19 @@ def extract_education(text: str) -> str:
 
                 full_text = ' '.join(block)
 
-                # Intentar extraer institución
+                # Extraer institución
                 institution = ""
                 for kw in education_keywords:
-                    # Permite palabras hasta el fin de línea, incluyendo nombres con comillas, puntos y múltiples palabras
                     matches = re.findall(rf'({kw}[^\n]*)', full_text, re.IGNORECASE)
                     if matches:
-                        # Elegimos la coincidencia más larga
                         institution = max(matches, key=len).strip()
                         break
 
-                # Intentar extraer grado y campo
+                # Si no se encontró en el bloque, usar la explícita
+                if not institution and explicit_institution:
+                    institution = explicit_institution
+
+                # Extraer grado y campo
                 degree_match = re.search(
                     r'(ingeniero|licenciatura|bachiller|técnico|tecnólogo|doctorado|magister)\s*(en|de)?\s*([a-zA-ZÁÉÍÓÚñÑ\s\-]+)?',
                     full_text, re.IGNORECASE
@@ -259,8 +268,8 @@ def extract_education(text: str) -> str:
                         'details': full_text
                     })
 
-                i += len(block)  # saltar las líneas que ya analizamos
-                i += 1
+                i += len(block)
+            i += 1
 
         return json.dumps(education_info, ensure_ascii=False) if education_info else ''
     except Exception as e:

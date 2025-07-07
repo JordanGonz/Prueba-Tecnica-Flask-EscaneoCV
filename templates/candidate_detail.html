@@ -198,12 +198,15 @@
                         {% if edu_list %}
                             {% for edu in edu_list %}
                                 <div class="border-start border-success ps-3 mb-3">
-                                    <h6 class="fw-bold mb-1">{{ edu.degree if edu.degree else 'Degree' }}</h6>
-                                    {% if edu.field %}
-                                        <p class="text-muted mb-2">{{ edu.field }}</p>
-                                    {% endif %}
-                                    {% if edu.details %}
-                                        <p class="small mb-0">{{ edu.details }}</p>
+                                   <h6 class="fw-bold mb-1">
+                                        {{ edu.degree }}
+                                        {% if edu.field and edu.field.lower() not in edu.degree.lower() %}
+                                            en {{ edu.field }}
+                                        {% endif %}
+                                    </h6>
+                                    <p class="text-muted mb-2">{{ edu.institution }}</p>
+                                    {% if edu.status %}
+                                        <p class="text-success small mb-0">{{ edu.status }}</p>
                                     {% endif %}
                                 </div>
                             {% endfor %}
