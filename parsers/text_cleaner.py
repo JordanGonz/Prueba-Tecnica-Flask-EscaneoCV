@@ -210,7 +210,7 @@ def extract_education(text: str) -> str:
         # Palabras clave para identificar instituciones educativas
         education_keywords = ['universidad', 'instituto', 'colegio', 'unidad educativa', 'escuela', 'school', 'college']
         degree_keywords = ['ingeniero', 'licenciatura', 'bachiller', 'doctorado', 'técnico', 'magister', 'título']
-        date_pattern = re.compile(r'\b(19|20)\d{2}\s*[-–]\s*(19|20)\d{2}\b')  # ej: 2013 – 2019
+        date_pattern = re.compile(r'\b(desde\s*)?(19|20)\d{2}\s*[-–]\s*(hasta\s*)?(19|20)\d{2}\b', re.IGNORECASE)
 
         i = 0
         while i < len(lines):
@@ -259,14 +259,15 @@ def extract_education(text: str) -> str:
                 elif "estudiante" in full_text.lower():
                     status = "Estudiante"
 
-                if institution or degree:
+                if institution or degree or field:
                     education_info.append({
-                        'degree': degree,
-                        'field': field,
-                        'institution': institution,
-                        'status': status,
-                        'details': full_text
+                        'degree': degree or '',
+                        'field': field or '',
+                        'institution': institution or '',
+                        'status': status or '',
+                        'details': full_text.strip()
                     })
+
 
                 i += len(block)
             i += 1
